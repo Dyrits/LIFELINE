@@ -35,13 +35,11 @@ Read these first; they are the sources of truth, not this file:
 
 ## Pending outside the code
 
-- Skills retrospective: the approved issue for `Dyrits/SKILLS` could not be opened (no GitHub credential or
-  MCP on this machine). It is saved at `.agents/feedbacks/2026-10-04-long-iterate-sessions-skip-skills.md`.
-  Once `gh` is logged in or a GitHub MCP exists, Dylan runs `/improve-skills`, which offers to open it and
-  deletes the record.
+- Skills retrospective: published as https://github.com/Dyrits/SKILLS/issues/2 (2026-10-04); the local
+  feedback record was deleted.
 - Compaction gate: `.claude/hooks/precompact-handoff-gate.sh` blocks compaction until a handoff under 5 min
   old exists. `hand-off` is user-only, so the gate tells the agent to read
-  `~/.claude/skills/hand-off/SKILL.md` and follow it (a local workaround, reported in the feedback record).
+  `~/.claude/skills/hand-off/SKILL.md` and follow it (a local workaround, reported in Dyrits/SKILLS#2).
 
 ## Verification
 
