@@ -27,11 +27,16 @@ export const CAREER: readonly CareerStop[] = [
     kind: 'job',
     place: t('Lyon', 'Lyon'),
     country: FRANCE,
-    motifs: ['door', 'barcode'],
+    motifs: ['newspaper', 'barcode'],
+    split: true,
+    caption: t(
+      'Étudiant, je distribue des journaux et je compte des étagères. Il faut bien payer le loyer.',
+      'As a student, I hand out newspapers and count shelves. Rent doesn’t pay itself.',
+    ),
     entries: [
       {
         company: 'INTERVALLES',
-        role: t('Démarcheur / Distributeur', 'Door-to-door canvasser / Distributor'),
+        role: t('Démarcheur / Distributeur', 'Street canvasser / Distributor'),
         from: '2011-03',
         to: '2012-06',
       },
@@ -43,6 +48,10 @@ export const CAREER: readonly CareerStop[] = [
     place: t('Nantes', 'Nantes'),
     country: FRANCE,
     motifs: ['bolt'],
+    caption: t(
+      'Premier poste de développeur : des millions de comptes clients, et bientôt une petite équipe à coordonner.',
+      'First developer job: millions of customer accounts, and soon a small team to lead.',
+    ),
     entries: [
       {
         company: 'Accenture',
@@ -75,7 +84,13 @@ export const CAREER: readonly CareerStop[] = [
     kind: 'job',
     place: t('Merredin', 'Merredin'),
     country: AUSTRALIA,
-    motifs: ['furrows'],
+    motifs: ['skeletonWeed'],
+    flight: true,
+    chapter: t('L’Australie, un visa vacances-travail en poche.', 'Australia, a working holiday visa in my pocket.'),
+    caption: t(
+      'Trois ans plus tard, je pose le clavier pour voyager. Dans des champs sans fin, je traque les mauvaises herbes.',
+      'Three years in, I put the keyboard down to travel. In endless fields, I hunt weeds.',
+    ),
     entries: [
       {
         company: 'CWC Professional AG Contractors',
@@ -95,6 +110,10 @@ export const CAREER: readonly CareerStop[] = [
     place: t('Perth', 'Perth'),
     country: AUSTRALIA,
     motifs: ['pan'],
+    caption: t(
+      'Une cuisine de bar, des services qui s’enchaînent. Les mains apprennent autre chose.',
+      'A bar kitchen, one shift after another. My hands learn something new.',
+    ),
     entries: [
       {
         company: 'Gramercy Bar & Kitchen',
@@ -110,6 +129,10 @@ export const CAREER: readonly CareerStop[] = [
     place: t('Dubbo', 'Dubbo'),
     country: AUSTRALIA,
     motifs: ['pickets'],
+    caption: t(
+      'Retour à la terre : du bétail et des moutons à marquer.',
+      'Back on the land, marking cattle and sheep.',
+    ),
     entries: [
       {
         company: 'J.A. Long & L.A. Cameron',
@@ -126,6 +149,11 @@ export const CAREER: readonly CareerStop[] = [
     place: t('Ubud', 'Ubud'),
     country: t('Indonésie', 'Indonesia'),
     motifs: ['browserGallery'],
+    chapter: t('L’Asie, sac au dos.', 'Asia, backpack on.'),
+    caption: t(
+      'À Bali, je rouvre l’ordinateur. Le code peut voyager avec moi.',
+      'In Bali I open the laptop again. Code can travel with me.',
+    ),
     entries: [
       {
         company: 'Freelance',
@@ -151,6 +179,10 @@ export const CAREER: readonly CareerStop[] = [
     place: t('George Town', 'George Town'),
     country: MALAYSIA,
     motifs: ['browserCode'],
+    caption: t(
+      'Nomade, je construis une plateforme pour une agence de voyage, depuis la route.',
+      'On the move, I build a platform for a travel agency, from the road.',
+    ),
     remoteFrom: [
       t('Munich, Allemagne', 'Munich, Germany'),
       t('Prague, Tchéquie', 'Prague, Czechia'),
@@ -186,6 +218,10 @@ export const CAREER: readonly CareerStop[] = [
     place: t('Taichung', 'Taichung'),
     country: t('Taïwan', 'Taiwan'),
     motifs: ['browserCalendar'],
+    caption: t(
+      'Un hôtel à Taïwan, ses chambres, sa réservation en ligne.',
+      'A hotel in Taiwan, its rooms, its online booking.',
+    ),
     entries: [
       {
         company: 'Freelance',
@@ -206,6 +242,10 @@ export const CAREER: readonly CareerStop[] = [
     place: t('Kuala Lumpur', 'Kuala Lumpur'),
     country: MALAYSIA,
     motifs: ['routeCross'],
+    caption: t(
+      'Je passe côté serveur, pour aider des ambulances à trouver le bon hôpital.',
+      'I move to the back end, helping ambulances find the right hospital.',
+    ),
     remoteFrom: [t('Langkawi, Malaisie', 'Langkawi, Malaysia')],
     entries: [
       {
@@ -237,6 +277,7 @@ export const CAREER: readonly CareerStop[] = [
     place: t('Malacca', 'Malacca'),
     country: MALAYSIA,
     motifs: ['bars'],
+    caption: t('Pour la première fois, c’est moi qui mène le projet.', 'For the first time, I lead the project.'),
     remoteFrom: [
       t('Die, France', 'Die, France'),
       t('Lyon, France', 'Lyon, France'),
@@ -265,6 +306,8 @@ export const CAREER: readonly CareerStop[] = [
     place: t('Bouguenais', 'Bouguenais'),
     country: FRANCE,
     motifs: ['plane'],
+    chapter: t('La France, le retour.', 'France, coming home.'),
+    caption: t('Entre deux contrats, je travaille sur le tarmac.', 'Between contracts, I work on the tarmac.'),
     entries: [
       {
         company: 'AviaPartner Nantes-Atlantique',
@@ -279,6 +322,10 @@ export const CAREER: readonly CareerStop[] = [
     place: t('Kuala Lumpur', 'Kuala Lumpur'),
     country: MALAYSIA,
     motifs: ['bubble'],
+    caption: t(
+      'Depuis Nantes, un chatbot pour une plateforme à l’autre bout du monde.',
+      'From Nantes, a chatbot for a platform on the other side of the world.',
+    ),
     remoteFrom: [t('Nantes, France', 'Nantes, France')],
     entries: [
       {
@@ -308,6 +355,10 @@ export const CAREER: readonly CareerStop[] = [
     place: t('En ligne', 'Online'),
     label: t('Formation', 'Training'),
     motifs: ['mortarboard'],
+    caption: t(
+      'J’officialise ce que la route m’a appris : un titre de développeur.',
+      'I make official what the road taught me: a developer’s diploma.',
+    ),
     remoteFrom: [
       t('Die, France', 'Die, France'),
       t('Londres, Royaume-Uni', 'London, United Kingdom'),
@@ -336,6 +387,10 @@ export const CAREER: readonly CareerStop[] = [
     place: t('Biarritz', 'Biarritz'),
     country: FRANCE,
     motifs: ['book'],
+    caption: t(
+      'Une plateforme de cours, conçue et livrée en deux semaines.',
+      'A course platform, designed and shipped in two weeks.',
+    ),
     remoteFrom: [t('Istanbul, Turquie', 'Istanbul, Türkiye'), t('Die, France', 'Die, France')],
     entries: [
       {
@@ -361,6 +416,10 @@ export const CAREER: readonly CareerStop[] = [
     place: t('Istanbul', 'Istanbul'),
     country: t('Turquie', 'Türkiye'),
     motifs: ['frame'],
+    caption: t(
+      'À Istanbul, je mène l’équipe d’une plateforme pour un collectif d’artistes.',
+      'In Istanbul, I lead the team behind a platform for an artists’ collective.',
+    ),
     remoteFrom: [t('Die, France', 'Die, France'), 'on-site', t('Charm el-Cheikh, Égypte', 'Sharm El Sheikh, Egypt')],
     entries: [
       {
@@ -388,6 +447,10 @@ export const CAREER: readonly CareerStop[] = [
     place: t('En ligne', 'Online'),
     label: t('Formation', 'Training'),
     motifs: ['mortarboard'],
+    caption: t(
+      'Un cran plus haut : je me forme à l’architecture logicielle.',
+      'A step up: I train in software architecture.',
+    ),
     remoteFrom: [
       t('Le Caire, Égypte', 'Cairo, Egypt'),
       t('Nantes, France', 'Nantes, France'),
@@ -417,6 +480,10 @@ export const CAREER: readonly CareerStop[] = [
     place: t('Lima', 'Lima'),
     country: t('Pérou', 'Peru'),
     motifs: ['blueprint'],
+    caption: t(
+      'À Lima, je dessine l’architecture avant qu’on écrive la première ligne.',
+      'In Lima, I draw the architecture before the first line is written.',
+    ),
     entries: [
       {
         company: 'Freelance',
@@ -446,6 +513,10 @@ export const CAREER: readonly CareerStop[] = [
     place: t('Lyon', 'Lyon'),
     country: FRANCE,
     motifs: ['phone'],
+    caption: t(
+      'Retour à Lyon, là où tout a commencé. Développeur sénior, cette fois.',
+      'Back in Lyon, where it all began. A senior developer this time.',
+    ),
     entries: [
       {
         company: 'Rubrash · Working in Lyon',
@@ -480,6 +551,10 @@ export const CAREER: readonly CareerStop[] = [
     country: FRANCE,
     label: t('Transmission', 'Teaching'),
     motifs: ['apprentices'],
+    caption: t(
+      'À mon tour de transmettre. Mes apprenants tracent leur propre ligne.',
+      'My turn to pass it on. My learners draw lines of their own.',
+    ),
     entries: [
       {
         company: 'OpenClassrooms',
@@ -521,6 +596,10 @@ export const CAREER: readonly CareerStop[] = [
     country: FRANCE,
     label: t('Paiement', 'Payments'),
     motifs: ['card'],
+    caption: t(
+      'Le paiement, là où chaque erreur se compte en euros.',
+      'Payments, where every bug is counted in euros.',
+    ),
     entries: [
       {
         company: 'HiPay',
@@ -560,6 +639,10 @@ export const CAREER: readonly CareerStop[] = [
     country: FRANCE,
     label: t('Freelance', 'Freelance'),
     motifs: ['cloud'],
+    caption: t(
+      'Aujourd’hui, de l’architecture à la production, tout le back-end entre mes mains.',
+      'Today, from architecture to production, the whole back end in my hands.',
+    ),
     remoteFrom: [t('Saint-Herblain, France', 'Saint-Herblain, France')],
     entries: [
       {

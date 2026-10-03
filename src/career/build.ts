@@ -1,23 +1,43 @@
 import type { CareerStop, Text, YearMonth } from '../data/types';
 import { ease, TAU } from '../engine/math';
-import { type PathFn, Story, strokes } from '../engine/story';
-import { hasShape, shapeOf } from './motifs';
+import { type PathFn, poly, Story, strokes } from '../engine/story';
+import { flight, hasShape, inkLength, type Stroke, shapeOf } from './motifs';
 
 export const INK = '#1d1b26';
 export const RED = '#b3262b';
 export const GOLD = '#c98d17';
 const APPRENTICE_COLOURS = [RED, GOLD, '#4f6b8a'] as const;
 
-/** Where and when a stop is drawn: the card is pinned at (x, y) and open from t0 until the next stop starts. */
-export type StopMark = Readonly<{ index: number; t0: number; t1: number; x: number; y: number }>;
+/** When a shape starts, and its top-right corner on the drawing. */
+export type ShapeMark = Readonly<{ t: number; x: number; y: number }>;
 
-export type Timeline = Readonly<{ story: Story; stops: readonly StopMark[]; end: number }>;
+/**
+ * Where and when a stop is drawn, from t0 to t1, starting at (x, y); the pen ends it at `endX`.
+ * `month` is when the stop began, counted in months since year 0; `shapes` follow the stop's motifs, in order.
+ */
+export type StopMark = Readonly<{
+  index: number;
+  t0: number;
+  t1: number;
+  x: number;
+  y: number;
+  endX: number;
+  month: number;
+  shapes: readonly ShapeMark[];
+}>;
+
+export type Timeline = Readonly<{ story: Story; stops: readonly StopMark[]; end: number; today: number }>;
 
 /** Distance under the ink line at which the gold training thread rides. */
 const RIDE = 14;
 /** Each stop starts a little higher: the career climbs. */
 const CLIMB = -28;
 const LOOP_WIDTH = 64;
+/** The detail pen sets off once the outline is this far along, and draws at least this fast. */
+const DETAIL_LAG = 0.35;
+const DETAIL_SPEED = 250;
+/** A chapter line is told along the connector before its stop, which stretches to give time to read it. */
+const CHAPTER_TIME = 4.5;
 
 export const monthIndex = (ym: YearMonth): number => {
   const [y, m] = ym.split('-').map(Number);
@@ -29,9 +49,10 @@ const stopEnd = (s: CareerStop, today: number): number =>
   Math.max(...s.entries.map(e => (e.to ? monthIndex(e.to) : today)));
 
 const words = (t: Text | undefined): number => (t ? t.fr.split(/\s+/).length : 0);
-/** Seconds a reader needs for a stop's card. */
+/** Seconds a reader needs for a stop's card and caption. */
 const readingTime = (s: CareerStop): number =>
-  1.5 +
+  2.5 +
+  words(s.caption) / 5 +
   s.entries.reduce(
     (n, e) => n + 3 + words(e.role) + words(e.summary) + (e.bullets ?? []).reduce((b, x) => b + words(x), 0),
     0,
@@ -52,6 +73,9 @@ export function buildCareer(stops: readonly CareerStop[], today: YearMonth): Tim
   const story = new Story(1.05);
   story.thread('A', INK, 2.6, 3.1);
   story.thread('C', GOLD, 2.0, 41.3);
+  // Second pens for the lifted strokes of a shape, so the line and the gold thread never break.
+  story.thread('D', INK, 1.9, 17.9);
+  story.thread('CD', GOLD, 1.5, 29.2);
   APPRENTICE_COLOURS.forEach((col, k) => {
     story.thread(`P${k}`, col, 1.2, 60 + k * 13);
   });
@@ -68,7 +92,7 @@ export function buildCareer(stops: readonly CareerStop[], today: YearMonth): Tim
   };
 
   // Lead-in.
-  story.caption({ fr: 'Une carrière, tracée d’un seul trait.', en: 'A career, drawn in a single line.' }, 0.6, 5);
+  story.caption({ fr: 'Ma carrière, d’un seul trait.', en: 'My career, in a single line.' }, 0.6, 4.2);
   story.T = 0.9;
   story.cue({ t: 1, kind: 'chord', notes: [48, 55], gap: 0.4, vel: 0.1, dur: 4 });
   story.T += story.add('A', u => [620 * u, 0], { speed: 140, w: u => 0.2 + 0.8 * Math.min(1, u * 5) });
@@ -77,13 +101,27 @@ export function buildCareer(stops: readonly CareerStop[], today: YearMonth): Tim
   stops.forEach((stop, index) => {
     const from = stopStart(stop);
 
-    // Connector: longer and calmer across a gap in the CV.
-    if (index > 0) {
+    // Flight: to a stop far away, the line circles a globe on its way.
+    if (index > 0 && stop.flight) {
+      const x0 = A.x;
+      const y0 = A.y;
+      const fl = flight(CLIMB);
+      const end = fl.path[fl.path.length - 1] as readonly [number, number];
+      const d = story.add('A', poly(fl.path), { speed: 280 });
+      details(story, 'D', fl.globe, x0, y0, Math.min(d, 4));
+      story.blot(x0 + fl.wash[0], y0 + fl.wash[1], fl.wash[2] * 1.3, 'sky', story.T + 1, 0.55);
+      if (stop.chapter) story.caption(stop.chapter, story.T, d + 0.4);
+      ride(end[0], u => CLIMB * u, d);
+      story.T += d;
+    } else if (index > 0) {
+      // Connector: longer and calmer across a gap in the CV.
       const gap = Math.max(0, from - (prevEnd ?? from));
-      const len = 170 + Math.min(gap, 12) * 30;
-      const wave = gap > 2 ? 7 : 0;
+      const speed = gap > 2 ? 150 : 210;
+      const len = Math.max(170 + Math.min(gap, 12) * 30, stop.chapter ? CHAPTER_TIME * speed : 0);
+      const wave = gap > 2 || stop.chapter ? 7 : 0;
       const dy = (u: number) => CLIMB * ease(u) + wave * Math.sin(u * TAU * 2) * (1 - u);
-      const d = story.add('A', u => [len * u, dy(u)], { speed: gap > 2 ? 150 : 210 });
+      const d = story.add('A', u => [len * u, dy(u)], { speed });
+      if (stop.chapter) story.caption(stop.chapter, story.T, d + 0.4);
       if (rideUntil !== null && from >= rideUntil) {
         // Training is over: the gold thread rejoins the line and fades.
         story.add('C', u => [len * u, dy(u) - RIDE * ease(u)], { raw: true, dur: d, a: u => 1 - ease(u) * 0.9 });
@@ -108,6 +146,7 @@ export function buildCareer(stops: readonly CareerStop[], today: YearMonth): Tim
       dur: 3,
     });
 
+    const shapes: ShapeMark[] = [];
     const places = (stop.remoteFrom ?? []).filter(p => p !== 'on-site').length;
     const training = stop.kind === 'training';
 
@@ -127,12 +166,18 @@ export function buildCareer(stops: readonly CareerStop[], today: YearMonth): Tim
       const sh = shapeOf(key);
       const startX = A.x;
       const startY = A.y;
-      const exit = sh.strokes[sh.strokes.length - 1]?.at(-1) ?? [0, 0];
+      const corner = [sh.outline, ...sh.details].flat();
+      shapes.push({
+        t: story.T,
+        x: startX + Math.max(...corner.map(p => p[0])),
+        y: startY + Math.min(...corner.map(p => p[1])),
+      });
+      const exit = sh.outline.at(-1) ?? [0, 0];
       let d: number;
       if (training) {
         C.x = startX;
         C.y = startY;
-        d = story.add('C', strokes(sh.strokes), { speed: 200 });
+        d = story.add('C', strokes([sh.outline]), { speed: 200 });
         const width = exit[0];
         story.add('A', places > 0 ? scaleX(loops(places), width / (places * LOOP_WIDTH)) : u => [width * u, 0], {
           raw: true,
@@ -141,9 +186,10 @@ export function buildCareer(stops: readonly CareerStop[], today: YearMonth): Tim
         const last = stop.entries[0];
         rideUntil = last.to ? monthIndex(last.to) : now;
       } else {
-        d = story.add('A', strokes(sh.strokes), { speed: 210 });
+        d = story.add('A', strokes([sh.outline]), { speed: 210 });
         ride(exit[0], () => 0, d);
       }
+      d = Math.max(d, details(story, training ? 'CD' : 'D', sh.details, startX, startY, d));
       story.blot(startX + sh.wash[0], startY + sh.wash[1], sh.wash[2] * 1.3, sh.pigment, story.T + d * 0.5, 0.55);
       story.T += d;
     }
@@ -159,7 +205,9 @@ export function buildCareer(stops: readonly CareerStop[], today: YearMonth): Tim
       story.T += d;
     }
 
-    marks.push({ index, t0, t1: story.T, x, y });
+    // The caption stays up until the next stop begins.
+    story.caption(stop.caption, t0 + 0.4, story.T - t0 + 1);
+    marks.push({ index, t0, t1: story.T, x, y, endX: A.x, month: from, shapes });
     prevEnd = Math.max(prevEnd ?? 0, stopEnd(stop, now));
   });
 
@@ -187,7 +235,24 @@ export function buildCareer(stops: readonly CareerStop[], today: YearMonth): Tim
   );
   story.cue({ t: end + 1.2, kind: 'chord', notes: [48, 55, 60, 64, 67, 72], gap: 0.22, vel: 0.1, dur: 6 });
   story.finish();
-  return { story, stops: marks, end };
+  return { story, stops: marks, end, today: now };
+}
+
+/**
+ * The month the pen has reached at time t: a stop holds its start month, matching its card,
+ * and the months roll by along the connector to the next stop, then on to today.
+ */
+export function monthAt({ stops, end, today }: Timeline, t: number): number {
+  const first = stops[0];
+  if (!first || t <= first.t0) return first?.month ?? today;
+  for (let i = 0; i < stops.length; i++) {
+    const m = stops[i] as StopMark;
+    const next = stops[i + 1];
+    const [t1, to] = next ? [next.t0, next.month] : [end, today];
+    if (t < m.t1) return m.month;
+    if (t < t1) return m.month + (to - m.month) * ((t - m.t1) / (t1 - m.t1));
+  }
+  return today;
 }
 
 const scaleX =
@@ -196,6 +261,21 @@ const scaleX =
     const [x, y] = fn(u);
     return [x * k, y];
   };
+
+/**
+ * Draws a shape's lifted strokes with a second pen, setting off while the outline is still being drawn and
+ * finishing about when it does, however dense the details. Returns when they end, from the start of the shape.
+ */
+function details(story: Story, pen: string, list: readonly Stroke[], x: number, y: number, outlineDur: number): number {
+  if (!list.length) return 0;
+  const th = story.get(pen);
+  th.x = x;
+  th.y = y;
+  const lag = outlineDur * DETAIL_LAG;
+  const dur = Math.min(inkLength(list) / DETAIL_SPEED, Math.max(outlineDur * (1 - DETAIL_LAG), 2.5));
+  story.add(pen, strokes(list), { t0: story.T + lag, dur });
+  return lag + dur;
+}
 
 /** Teaching: the line carries on while apprentice threads branch off it and go their own way. */
 function apprentices(story: Story): number {

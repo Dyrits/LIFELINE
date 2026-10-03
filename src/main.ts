@@ -1,6 +1,6 @@
 import './style.css';
-import { buildCareer, type StopMark } from './career/build';
-import { CardLayer } from './career/cards';
+import { buildCareer, monthAt, type StopMark } from './career/build';
+import { CardLayer, cardAnchor } from './career/cards';
 import { CAREER } from './data/career';
 import type { Lang } from './data/types';
 import { Audio } from './engine/audio';
@@ -18,7 +18,9 @@ const $ = <T extends HTMLElement>(sel: string): T => {
 const canvas = $<HTMLCanvasElement>('#c');
 const capEl = $('#cap');
 const progEl = $('#prog');
-const hintEl = $('#hint');
+const yearEl = $('#year');
+const pauseBtn = $<HTMLButtonElement>('#pause');
+const hudEl = $('#hud');
 const sndBtn = $<HTMLButtonElement>('#snd');
 const langBtn = $<HTMLButtonElement>('#lang');
 const againBtn = $<HTMLButtonElement>('#again');
@@ -45,7 +47,7 @@ function baseline(t: number): number {
 }
 
 const player = new Player(renderer, career.story, career.end, audio, {
-  order: ['P0', 'P1', 'P2', 'C', 'A'],
+  order: ['P0', 'P1', 'P2', 'C', 'CD', 'D', 'A'],
   follow: [
     ['A', 1],
     ['C', 0.5],
@@ -57,6 +59,7 @@ const cards = new CardLayer($('#cards'), CAREER, marks);
 
 let lang: Lang = detectLang();
 let started = false;
+let paused = false;
 let capIdx = -1;
 let capTimer = 0;
 
@@ -70,8 +73,17 @@ function applyLang(next: Lang): void {
   for (const el of langBtn.querySelectorAll<HTMLElement>('[data-lang]'))
     el.classList.toggle('on', el.dataset.lang === lang);
   sndBtn.textContent = (audio.muted ? UI.soundOff : UI.soundOn)[lang];
+  pauseBtn.textContent = (paused ? UI.resume : UI.pause)[lang];
   cards.render(lang);
   capIdx = -2; // Forces the caption to redraw in the new language.
+}
+
+/** The caption's text on screen, not its full-width box; none while it is hidden. */
+function captionBox(): DOMRect | undefined {
+  if (!capEl.classList.contains('show') || !capEl.textContent) return undefined;
+  const range = document.createRange();
+  range.selectNodeContents(capEl);
+  return range.getBoundingClientRect();
 }
 
 function updateCaption(): void {
@@ -105,6 +117,23 @@ function updateCaption(): void {
   );
 }
 
+function setPaused(next: boolean): void {
+  paused = next;
+  player.hurry = false;
+  if (paused) audio.scratch(0);
+  pauseBtn.textContent = (paused ? UI.resume : UI.pause)[lang];
+  pauseBtn.setAttribute('aria-pressed', String(paused));
+}
+
+/** The year the pen has reached, or the whole span once the drawing is done. */
+function updateYear(): void {
+  const year = (m: number) => String(Math.floor(m / 12));
+  const text = player.revealed
+    ? `${year(monthAt(career, 0))} – ${year(career.today)}`
+    : year(monthAt(career, player.now));
+  if (yearEl.textContent !== text) yearEl.textContent = text;
+}
+
 function resize(): void {
   renderer.resize(innerWidth, innerHeight, Math.min(2, devicePixelRatio || 1));
   if (!started) player.seek(0);
@@ -117,7 +146,7 @@ function start(withSound: boolean): void {
   introEl.classList.add('gone');
   if (withSound) audio.init();
   player.seek(0);
-  hintEl.style.opacity = '1';
+  setPaused(false);
   againBtn.classList.remove('show');
 }
 
@@ -131,6 +160,7 @@ function leave(): void {
   capEl.classList.remove('show');
   againBtn.classList.remove('show');
   player.seek(0);
+  setPaused(false);
   careerBtn.focus();
 }
 
@@ -158,11 +188,11 @@ function frame(ts: number): void {
   const dt = Math.min(0.05, (ts - (last || ts)) / 1000);
   last = ts;
   if (started) {
-    player.update(dt);
-    cards.update(player, renderer);
+    player.update(dt, !paused);
+    cards.update(player, renderer, { hud: hudEl.getBoundingClientRect(), caption: captionBox() });
     updateCaption();
+    updateYear();
     progEl.style.width = `${player.progress * 100}%`;
-    if (player.now > 14) hintEl.style.opacity = '0';
     if (player.now > career.end + 10) againBtn.classList.add('show');
   }
   player.draw();
@@ -170,8 +200,20 @@ function frame(ts: number): void {
 
 addEventListener('resize', resize);
 careerBtn.addEventListener('click', () => start(true));
+// Scrolling moves time: down draws ahead, up rewinds. A mouse notch is about two seconds.
+canvas.addEventListener(
+  'wheel',
+  e => {
+    if (!started) return;
+    e.preventDefault();
+    const px = (e.deltaY + e.deltaX) * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? innerHeight : 1);
+    player.scrub(px * 0.02);
+    againBtn.classList.toggle('show', player.now > career.end + 10);
+  },
+  { passive: false },
+);
 canvas.addEventListener('pointerdown', () => {
-  player.hurry = true;
+  if (!paused) player.hurry = true;
   cards.unpin();
 });
 addEventListener('pointerup', () => {
@@ -184,15 +226,22 @@ addEventListener('keydown', e => {
   if (e.target instanceof HTMLButtonElement && (e.code === 'Space' || e.code === 'Enter')) return;
   if (e.code === 'Space') {
     e.preventDefault();
-    if (started) player.hurry = true;
+    if (started && !e.repeat) setPaused(!paused);
   }
+  if (e.key === 'Shift' && started && !paused) player.hurry = true;
   if (e.code === 'ArrowRight') jump(1);
   if (e.code === 'ArrowLeft') jump(-1);
   if (e.code === 'Escape') cards.unpin();
   if (e.code === 'KeyM') sndBtn.click();
 });
+// A button clicked with the mouse lets go of focus, so Space pauses instead of pressing it again.
+// Buttons reached with the keyboard (detail 0) keep focus and their usual Space behaviour.
+addEventListener('click', e => {
+  const btn = e.target instanceof Element ? e.target.closest('button') : null;
+  if (btn && e.detail > 0) btn.blur();
+});
 addEventListener('keyup', e => {
-  if (e.code === 'Space') player.hurry = false;
+  if (e.key === 'Shift') player.hurry = false;
 });
 sndBtn.addEventListener('click', e => {
   e.stopPropagation();
@@ -209,11 +258,24 @@ langBtn.addEventListener('click', () => {
   saveLang(next);
   applyLang(next);
 });
+pauseBtn.addEventListener('click', () => setPaused(!paused));
 againBtn.addEventListener('click', () => {
   player.seek(0);
+  setPaused(false);
   againBtn.classList.remove('show');
 });
 backBtn.addEventListener('click', leave);
+
+// Development only: lets browser tests see where a card hangs from the line.
+if (import.meta.env.DEV)
+  Object.assign(window, {
+    lifeline: {
+      cardAnchorOnScreen: (i: number) => {
+        const m = marks[i] as StopMark;
+        return renderer.toScreen(player.cam, cardAnchor(m, renderer), m.y);
+      },
+    },
+  });
 
 resize();
 applyLang(lang);

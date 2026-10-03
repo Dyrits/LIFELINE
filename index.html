@@ -1,40 +1,51 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="fr">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Lifeline · Dylan J. Gerrits</title>
-<meta name="description" content="Dylan J. Gerrits: a life and a career, drawn as a single line.">
-</head>
-<body>
-<canvas id="c"></canvas>
-<div id="cards" class="off"></div>
-<div id="cap"></div>
-<div id="prog"></div>
-<div id="hint" class="mono" data-i18n="hint"></div>
-<button id="back" class="mono chrome" type="button" data-i18n="back"></button>
-<div id="top" class="chrome-group">
-  <button id="lang" class="mono chrome" type="button" aria-label="Langue / Language"><span data-lang="fr">FR</span> · <span data-lang="en">EN</span></button>
-  <button id="snd" class="mono chrome" type="button"></button>
-</div>
-<button id="again" class="mono" type="button" data-i18n="again"></button>
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lifeline · Dylan J. Gerrits</title>
+    <meta name="description" content="Dylan J. Gerrits: a life and a career, drawn as a single line.">
+  </head>
+  <body>
+    <canvas id="c"></canvas>
+    <div id="cards" class="off"></div>
+    <div id="cap"></div>
+    <div id="prog"></div>
+    <div id="hud">
+      <div id="year" aria-hidden="true"></div>
+      <div class="row">
+        <button id="pause" class="mono chrome" type="button" aria-keyshortcuts="Space"></button>
+        <span id="hint" class="mono" data-i18n="hint"></span>
+      </div>
+    </div>
+    <button id="back" class="mono chrome" type="button" data-i18n="back"></button>
+    <div id="top" class="chrome-group">
+      <button id="lang" class="mono chrome" type="button" aria-label="Langue / Language">
+        <span data-lang="fr">FR</span>
+        · <span data-lang="en">EN</span>
+      </button>
+      <button id="snd" class="mono chrome" type="button"></button>
+    </div>
+    <button id="again" class="mono" type="button" data-i18n="again"></button>
 
-<div id="intro">
-  <h1>Lifeline</h1>
-  <svg viewBox="0 0 460 70" aria-hidden="true">
-    <path d="M0 45 H150 L160 38 L170 45 H190 L196 52 L206 4 L216 62 L224 45 H250 L262 34 L276 45 H460"/>
-    <path class="r" d="M0 49 H150 L160 42 L170 49 H190 L196 56 L206 8 L216 66 L224 49 H250 L262 38 L276 49 H460"/>
-  </svg>
-  <p class="who">Dylan J. Gerrits</p>
-  <p class="tagline" data-i18n="tagline"></p>
-  <nav class="paths">
-    <button type="button" class="path" id="path-life" disabled><span data-i18n="life"></span> <small class="mono" data-i18n="soon"></small></button>
-    <span class="sep" aria-hidden="true">|</span>
-    <button type="button" class="path" id="path-career"><span data-i18n="career"></span></button>
-  </nav>
-  <span class="mono call" data-i18n="choose"></span>
-</div>
+    <div id="intro">
+      <h1>Lifeline</h1>
+      <svg viewBox="0 0 460 70" aria-hidden="true">
+        <path d="M0 45 H150 L160 38 L170 45 H190 L196 52 L206 4 L216 62 L224 45 H250 L262 34 L276 45 H460" />
+        <path class="r" d="M0 49 H150 L160 42 L170 49 H190 L196 56 L206 8 L216 66 L224 49 H250 L262 38 L276 49 H460" />
+      </svg>
+      <p class="who">Dylan J. Gerrits</p>
+      <p class="tagline" data-i18n="tagline"></p>
+      <nav class="paths">
+        <button type="button" class="path" id="path-life" disabled>
+          <span data-i18n="life"></span> <small class="mono" data-i18n="soon"></small>
+        </button>
+        <span class="sep" aria-hidden="true">|</span>
+        <button type="button" class="path" id="path-career"><span data-i18n="career"></span></button>
+      </nav>
+      <span class="mono call" data-i18n="choose"></span>
+    </div>
 
-<script type="module" src="/src/main.ts"></script>
-</body>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
 </html>

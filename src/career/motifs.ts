@@ -6,11 +6,13 @@ export type Pt = readonly [x: number, y: number];
 export type Stroke = readonly Pt[];
 
 /**
- * A shape drawn by the pen, relative to where it touches the line (y grows downwards, so shapes rise at negative y).
- * The first stroke starts at the origin; the pen lifts between strokes and the last point is where the line carries on.
+ * A shape drawn on the line, relative to where it touches it (y grows downwards, so shapes rise at negative y).
+ * The outline is one unbroken stroke from the origin to where the line carries on; the details are lifted strokes,
+ * drawn by a second pen so the line itself never breaks.
  */
 export type Shape = Readonly<{
-  strokes: readonly Stroke[];
+  outline: Stroke;
+  details: readonly Stroke[];
   pigment: Pigment;
   /** Centre and size of the watercolour wash under the shape. */
   wash: readonly [x: number, y: number, size: number];
@@ -31,10 +33,8 @@ const rect = (x: number, y: number, w: number, h: number): Pt[] => [
   [x, y],
 ];
 
-/** Builds a shape whose outline runs from the origin back to the line; details follow, then the pen returns. */
 function shape(outline: Stroke, details: readonly Stroke[], pigment: Pigment, wash: Shape['wash']): Shape {
-  const exit = outline[outline.length - 1] as Pt;
-  return { strokes: [outline, ...details, [exit]], pigment, wash };
+  return { outline, details, pigment, wash };
 }
 
 /** A browser window standing on the line, with its content drawn inside. */
@@ -64,26 +64,50 @@ function browser(content: readonly Stroke[], pigment: Pigment): Shape {
 }
 
 const SHAPES: Record<Exclude<MotifKey, 'apprentices'>, () => Shape> = {
-  // Door-to-door: a door, its knob and letterbox.
-  door: () =>
+  // Street distribution: a newspaper, its corner folded.
+  newspaper: () =>
     shape(
       [
         [0, 0],
         [40, 0],
-        [40, -180],
-        [150, -180],
-        [150, 0],
-        [200, 0],
+        [40, -170],
+        [205, -170],
+        [235, -140],
+        [235, 0],
+        [275, 0],
       ],
       [
-        circle(128, -92, 7, 12),
         [
-          [70, -125],
-          [120, -125],
+          [205, -170],
+          [205, -140],
+          [235, -140],
         ],
+        [
+          [60, -148],
+          [190, -148],
+        ],
+        [
+          [60, -124],
+          [215, -124],
+        ],
+        rect(60, -106, 70, 52),
+        ...[-104, -90, -76, -62].map(
+          y =>
+            [
+              [146, y],
+              [215, y],
+            ] as Stroke,
+        ),
+        ...[-38, -24].map(
+          y =>
+            [
+              [60, y],
+              [215, y],
+            ] as Stroke,
+        ),
       ],
       'ochre',
-      [95, -95, 420],
+      [135, -90, 420],
     ),
 
   // Inventory: a barcode.
@@ -134,36 +158,70 @@ const SHAPES: Record<Exclude<MotifKey, 'apprentices'>, () => Shape> = {
       [150, -140, 440],
     ),
 
-  // Field scouting: rows running to the horizon, one weed circled.
-  furrows: () => {
-    const rows: Pt[] = [[0, 0]];
-    const n = 8;
-    for (let k = 0; k < n; k++) {
-      const bottom: Pt = [30 + k * 40, 0];
-      const top: Pt = [118 + (k * 104) / (n - 1), -150];
-      // Ploughing back and forth: up one row, down the next.
-      rows.push(...(k % 2 ? [top, bottom] : [bottom, top]));
-    }
-    rows.push([340, 0]);
-    const sprout = (x: number, y: number): Stroke => [
-      [x - 6, y - 10],
-      [x, y],
-      [x + 6, y - 12],
+  // Field scouting: a skeleton weed (Chondrilla juncea), toothed rosette leaves at its foot,
+  // wiry branching stems and small dandelion-like flower heads.
+  skeletonWeed: () => {
+    const BASE: Pt = [150, 0];
+    // A runcinate leaf: its upper edge cut into lobes pointing back to the base, its lower edge smooth.
+    const leaf = (tip: Pt): Pt[] => {
+      const [dx, dy] = [tip[0] - BASE[0], tip[1] - BASE[1]];
+      const len = Math.hypot(dx, dy);
+      const [nx, ny] = [dy / len, -dx / len];
+      const up = ny < 0 ? 1 : -1;
+      const at = (u: number, off: number, back = 0): Pt => [
+        BASE[0] + dx * u + nx * off * up - (dx / len) * back,
+        BASE[1] + dy * u + ny * off * up - (dy / len) * back,
+      ];
+      const upper = [0.12, 0.32, 0.52, 0.72].flatMap(u => [at(u, 4), at(u + 0.12, 18, 12)]);
+      const lower = [0.8, 0.55, 0.3].map(u => at(u, -7));
+      return [...upper, tip, ...lower, BASE];
+    };
+    // A flower head: a small disc with its rays.
+    const head = (x: number, y: number): Stroke[] => [
+      circle(x, y, 7, 12),
+      ...Array.from({ length: 9 }, (_, k): Stroke => {
+        const a = (k * TAU) / 9;
+        return [
+          [x + 11 * Math.cos(a), y + 11 * Math.sin(a)],
+          [x + 21 * Math.cos(a), y + 21 * Math.sin(a)],
+        ];
+      }),
     ];
     return shape(
-      rows,
+      [[0, 0], BASE, ...leaf([58, -82]), ...leaf([246, -78]), [300, 0]],
       [
         [
-          [80, -150],
-          [262, -150],
+          [150, -2],
+          [148, -90],
+          [151, -160],
+          [149, -238],
         ],
-        sprout(110, -60),
-        sprout(170, -100),
-        sprout(232, -40),
-        circle(232, -45, 17, 16),
+        [
+          [151, -150],
+          [118, -190],
+          [104, -222],
+        ],
+        [
+          [148, -120],
+          [182, -168],
+          [198, -214],
+        ],
+        [
+          [149, -80],
+          [190, -110],
+          [214, -128],
+        ],
+        [
+          [128, -108],
+          [149, -88],
+        ],
+        ...head(149, -258),
+        ...head(98, -240),
+        ...head(204, -232),
+        ...head(230, -138),
       ],
       'sage',
-      [170, -70, 440],
+      [150, -120, 440],
     );
   },
 
@@ -416,8 +474,8 @@ const SHAPES: Record<Exclude<MotifKey, 'apprentices'>, () => Shape> = {
     ),
 
   // Training: a mortarboard, its tassel falling back into a thread under the line.
-  mortarboard: () => ({
-    strokes: [
+  mortarboard: () =>
+    shape(
       [
         [0, 0],
         [10, -170],
@@ -425,24 +483,23 @@ const SHAPES: Record<Exclude<MotifKey, 'apprentices'>, () => Shape> = {
         [270, -170],
         [140, -125],
         [10, -170],
-      ],
-      [
-        [65, -150],
-        [65, -98],
-        ...arc(140, -98, 75, Math.PI, 0, 12).map(([x, y]) => [x, -98 + (y + 98) * 0.3] as const),
-        [215, -150],
-      ],
-      [
         [140, -170],
         [246, -160],
         [246, -104],
         [262, -40],
         [300, 14],
       ],
-    ],
-    pigment: 'window',
-    wash: [140, -150, 480],
-  }),
+      [
+        [
+          [65, -150],
+          [65, -98],
+          ...arc(140, -98, 75, Math.PI, 0, 12).map(([x, y]) => [x, -98 + (y + 98) * 0.3] as const),
+          [215, -150],
+        ],
+      ],
+      'window',
+      [140, -150, 480],
+    ),
 
   // Courses: an open book.
   book: () =>
@@ -679,5 +736,61 @@ const SHAPES: Record<Exclude<MotifKey, 'apprentices'>, () => Shape> = {
 export const hasShape = (key: MotifKey): key is Exclude<MotifKey, 'apprentices'> => key !== 'apprentices';
 
 export const shapeOf = (key: Exclude<MotifKey, 'apprentices'>): Shape => SHAPES[key]();
+
+/** A quadratic Bézier curve from a through control point c to b. */
+const bezier = (a: Pt, c: Pt, b: Pt, n = 24): Pt[] =>
+  Array.from({ length: n + 1 }, (_, i) => {
+    const u = i / n;
+    const v = 1 - u;
+    return [v * v * a[0] + 2 * u * v * c[0] + u * u * b[0], v * v * a[1] + 2 * u * v * c[1] + u * u * b[1]] as const;
+  });
+
+/** A flight around the globe, for the stretch of line leading to a stop far away. */
+export type Flight = Readonly<{
+  /** The line's unbroken path, from where it takes off to where it lands. */
+  path: readonly Pt[];
+  /** The globe, drawn by the detail pen. */
+  globe: readonly Stroke[];
+  wash: readonly [x: number, y: number, size: number];
+}>;
+
+/**
+ * The line takes off, circles the globe one and a half times, its orbit tilted like a flight path, and lands
+ * `rise` below (or above) its take-off height, `width` further on.
+ */
+export function flight(rise: number): Flight {
+  const [cx, cy, r] = [260, -165, 78];
+  const [ox, oy] = [r + 46, (r + 46) * 0.72];
+  const orbit = (a: number): Pt => [cx + ox * Math.cos(a), cy + oy * Math.sin(a) - 22 * Math.cos(a)];
+  const turns = Array.from({ length: 73 }, (_, i) => orbit(Math.PI + (i / 72) * 3 * Math.PI));
+  const entry = turns[0] as Pt;
+  const exit = turns[turns.length - 1] as Pt;
+  const land: Pt = [exit[0] + 230, rise];
+  const ellipse = (rx: number, ry: number, n = 22): Pt[] =>
+    Array.from({ length: n + 1 }, (_, i) => {
+      const a = -Math.PI / 2 + (i / n) * TAU;
+      return [cx + rx * Math.cos(a), cy + ry * Math.sin(a)] as const;
+    });
+  return {
+    path: [...bezier([0, 0], [entry[0], 0], entry), ...turns.slice(1), ...bezier(exit, [exit[0], rise], land).slice(1)],
+    globe: [
+      circle(cx, cy, r, 26),
+      ellipse(r, r * 0.28),
+      ellipse(r * 0.42, r),
+      [
+        [cx, cy - r],
+        [cx, cy + r],
+      ],
+    ],
+    wash: [cx, cy, 380],
+  };
+}
+
+/** Inked length of strokes, leaving out the travel between them. */
+export const inkLength = (list: readonly Stroke[]): number =>
+  list.reduce(
+    (n, s) => n + s.slice(1).reduce((m, p, i) => m + Math.hypot(p[0] - (s[i] as Pt)[0], p[1] - (s[i] as Pt)[1]), 0),
+    0,
+  );
 
 export const SHAPE_KEYS = Object.keys(SHAPES) as Exclude<MotifKey, 'apprentices'>[];

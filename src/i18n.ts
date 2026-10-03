@@ -12,7 +12,12 @@ export const UI = {
   soundOff: t('Son coupé', 'Sound off'),
   again: t('Retracer', 'Draw it again'),
   back: t('Chemins', 'Paths'),
-  hint: t('Maintenir pour accélérer · ← → étapes', 'Hold to hurry · ← → stops'),
+  hint: t(
+    'Maj ou clic maintenu pour accélérer · Espace pause · Molette pour avancer ou reculer · ← → étapes',
+    'Hold Shift or click to hurry · Space to pause · Scroll to rewind or skip ahead · ← → stops',
+  ),
+  pause: t('Pause', 'Pause'),
+  resume: t('Reprendre', 'Play'),
   remote: t('À distance', 'Remote'),
   workedFrom: t('Travaillé depuis', 'Worked from'),
   onSite: t('sur place', 'on site'),

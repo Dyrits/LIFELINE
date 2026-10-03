@@ -15,6 +15,10 @@ export type PlayerOptions = Readonly<{
 }>;
 
 const HURRY = 3.4;
+/** The camera keeps the pen this fraction of the screen width right of centre, leaving room behind it. */
+export const PEN_AHEAD = 0.12;
+/** How far past the end the drawing can be scrubbed: through the closing captions. */
+const AFTER_END = 12;
 
 /** Plays a built story: advances time, fires sound cues, moves the camera and draws each frame. */
 export class Player {
@@ -47,20 +51,29 @@ export class Player {
 
   /** Jumps to a moment without replaying the sounds in between; the camera cuts there. */
   seek(t: number): void {
-    this.now = Math.max(0, t);
+    this.moveTo(t);
     this.spd = 1;
+    Object.assign(this.cam, this.target());
+  }
+
+  /** Moves time by `dt` seconds, either way, without replaying sounds; the camera glides there. */
+  scrub(dt: number): void {
+    this.moveTo(clamp(this.now + dt, 0, this.end + AFTER_END));
+  }
+
+  private moveTo(t: number): void {
+    this.now = Math.max(0, t);
     const cues = this.story.cues;
     this.cueIdx = cues.findIndex(c => c.t > this.now);
     if (this.cueIdx < 0) this.cueIdx = cues.length;
-    const target = this.target();
-    Object.assign(this.cam, target);
     this.lastTipX = null;
   }
 
-  update(dt: number): void {
+  /** Advances time by dt, unless `advance` is false (paused), and lets the camera catch up either way. */
+  update(dt: number, advance = true): void {
     const reveal = this.revealed;
     this.spd += ((this.hurry && !reveal ? HURRY : 1) - this.spd) * (1 - Math.exp(-dt * 4));
-    this.now += dt * this.spd;
+    if (advance) this.now += dt * this.spd;
     const cues = this.story.cues;
     while (this.cueIdx < cues.length) {
       const c = cues[this.cueIdx];
@@ -74,6 +87,13 @@ export class Player {
     this.cam.x += (target.x - this.cam.x) * k;
     this.cam.y += (target.y - this.cam.y) * k;
     this.cam.z += (target.z - this.cam.z) * k;
+    // Easing never quite arrives: settle once close, so a paused drawing stands perfectly still.
+    if (
+      Math.abs(target.x - this.cam.x) < 0.05 &&
+      Math.abs(target.y - this.cam.y) < 0.05 &&
+      Math.abs(target.z - this.cam.z) < 1e-4
+    )
+      Object.assign(this.cam, target);
 
     const lead = tip(this.story.get(this.opts.lead), this.now);
     if (reveal || !lead) {
@@ -129,10 +149,10 @@ export class Player {
     }
     const lead = tip(this.story.get(this.opts.lead), this.now);
     const ly = lead?.y ?? 0;
-    const x = (ws ? sx / ws : (lead?.x ?? 0)) - (r.W * 0.12) / S;
+    const x = (ws ? sx / ws : (lead?.x ?? 0)) - (r.W * PEN_AHEAD) / S;
     if (this.opts.baseline) {
-      // Hold the line a little above centre, leaving the lower part of the screen to the cards.
-      return { x, y: this.opts.baseline(this.now) + (r.H * 0.04) / S, z };
+      // Hold the line well above centre, leaving the lower part of the screen to the cards and the caption.
+      return { x, y: this.opts.baseline(this.now) + (r.H * 0.11) / S, z };
     }
     return { x, y: clamp(ws ? sy / ws : ly, ly - 300, ly + 300), z };
   }

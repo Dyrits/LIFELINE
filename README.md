@@ -29,4 +29,4 @@ npm run e2e        # browser smoke test (starts its own dev server)
 - `?t=120` jumps to that second of it.
 - `?lang=en` or `?lang=fr` forces the language.
 
-While it plays: hold the mouse or Space to hurry, ← / → to jump between stops, M to toggle sound.
+While it plays: hold Shift or the mouse to hurry, Space (or the Pause button) to pause, scroll to move back and forth in time, ← / → to jump between stops, M to toggle sound.

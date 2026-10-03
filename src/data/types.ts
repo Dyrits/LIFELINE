@@ -9,10 +9,10 @@ export type YearMonth = `${number}-${number}${number}`;
 
 /** Shapes the pen can draw for a stop; each key has a builder in `career/motifs.ts`. */
 export type MotifKey =
-  | 'door'
+  | 'newspaper'
   | 'barcode'
   | 'bolt'
-  | 'furrows'
+  | 'skeletonWeed'
   | 'pan'
   | 'pickets'
   | 'browserGallery'
@@ -55,6 +55,14 @@ export type CareerStop = Readonly<{
   /** Replaces the company name on the stop's label. */
   label?: Text;
   motifs: readonly MotifKey[];
+  /** The line of story told while the stop is drawn, in the first person. */
+  caption: Text;
+  /** Opens a chapter of the story: told on the stretch of line leading to this stop. */
+  chapter?: Text;
+  /** The stretch of line leading to this stop flies around a globe: the stop is far away. */
+  flight?: boolean;
+  /** Each entry gets its own card: the first below the line, the others beside the shape with the same index. */
+  split?: boolean;
   remoteFrom?: readonly RemotePlace[];
   entries: readonly [Entry, ...Entry[]];
 }>;
