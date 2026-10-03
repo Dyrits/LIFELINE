@@ -48,9 +48,12 @@ English translations.
   improvement is a pannable / zoomable overview.
 - Phone layout: drawing is small at 390 px wide.
 - Hosting / deployment target.
+- Reconcile career data with the LinkedIn profile (`documentation/sources/linkedin/linkedin-profile.md`),
+  which differs from WAYPOINTS: EPSI and O'clock split into dated roles (EPSI did end in July 2025),
+  Working in Lyon listed separately from Rubrash, extra Accenture and Lima bullets. Ask which source wins.
 
 ## Notes
 
 - Foldkit skill folders the user added to the workspace are not part of this app and are not committed.
-- Handoffs in `.agents/handoffs/` are committed; latest: `.agents/handoffs/2026-10-03-1945-career-review-feedback.md`.
+- Handoffs in `.agents/handoffs/` are committed; latest: `.agents/handoffs/2026-10-03-2010-scriptbook-for-visual-review.md`; saved scripts: `.agents/scripts/INDEX.md`.
 - Next step: collect the user's feedback on batch 1 before anything else.
