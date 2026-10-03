@@ -41,19 +41,112 @@ Evidence:
 Needs the user's judgment: overall look, each shape, pacing, card text and the
 English translations.
 
-## Deferred, in scope
+## Batch 2: first review feedback (implemented and checked, awaiting user review)
 
-- Life path content: needs Dylan's story beats.
-- Overview is small on wide careers (21 stops across one screen): candidate
-  improvement is a pannable / zoomable overview.
-- Phone layout: drawing is small at 390 px wide.
-- Hosting / deployment target.
-- Reconcile career data with the LinkedIn profile (`documentation/sources/linkedin/linkedin-profile.md`),
-  which differs from WAYPOINTS: EPSI and O'clock split into dated roles (EPSI did end in July 2025),
-  Working in Lyon listed separately from Rubrash, extra Accenture and Lima bullets. Ask which source wins.
+Feedback received 2026-10-04, all within batch 1's agreed behaviour:
+- Pause: Pause / Play button and Space (Shift or a held click hurries; changed 2026-10-04 at the user's request, P and Space-to-hurry dropped); the bottom-left controls and hint stay visible
+  for the whole drawing (the hint used to fade after 14 s). Open cards step aside from them.
+- Year indicator: the year the pen has reached, bottom left. A stop holds its start year (the
+  one on its card); the years roll by along the connector to the next stop; the overview shows
+  the whole span (2011 – 2026).
+- Detached strokes: a shape is now an unbroken outline (drawn by the line) plus details drawn
+  by a second pen (`D` in ink, `CD` in gold for training), which sets off while the outline is
+  drawn. The ink line never lifts (tested).
+- Speed: details finish about when the outline does (at least 250 units/s), so dense shapes
+  draw quickly (barcode ~11 s → ~3 s). Whole Career: ~4 min 48 s → ~4 min 03 s. Minimum card
+  reading time raised by 1 s so short cards still last over 3 s.
+- First stop: street distribution, so a newspaper replaces the door; English role is now
+  "Street canvasser / Distributor" (French "Démarcheur / Distributeur" unchanged).
+
+Evidence: `npm run check` (51 Vitest tests), `npm run e2e` (4 Playwright tests, new: pause
+freezes the canvas, year and controls visible). Screenshots of every stop mid-drawing and at
+its end, plus a 390 px phone view, reviewed by the agent.
+
+The user's feedback stopped at "To not overload with feedback...": more is expected.
+
+## Batch 3: story captions and split first stop (implemented and checked, awaiting user review)
+
+Agreed 2026-10-04: the user wants a story told at nearly every stop, in the first person
+("let's try first person"), and the first stop's two jobs on separate cards.
+- Each stop carries a `caption` (`src/data/career.ts`), drafted by the agent from the card
+  content, shown from the stop's start until the next stop. Captions sit at the bottom as in
+  the reference page (user's choice); the line is held higher (camera offset 0.11 H) and open
+  cards stop above the caption text, scrolling when too long. Opening line: "Ma carrière, d’un seul trait."
+- `split: true` on a stop gives each later entry its own side card, pinned at the top right
+  of the shape with the same index and opening when that shape starts (RGIS beside the
+  barcode). Side cards have no overview tag; reopening the stop's tag opens them too.
+- Reading time counts the caption's words.
+
+Facts behind the drafted captions confirmed by the user (2026-10-04): student for the first jobs,
+left Accenture by choice to travel, tarmac for the ramp agent job, the diploma made official
+what the road taught.
+- Chapter lines (approved): a stop's `chapter` is told along the connector leading to it,
+  stretched to ~4.5 s. Three chapters: Australia (stop 2), Asia (stop 5), back in France
+  (stop 10); captions of those stops reworded to avoid repeating them. Career now ~4 min 57 s.
+
+Evidence: `npm run check` (53 Vitest tests, new: each stop's caption is shown during it, chapters are told before their stop),
+`npm run e2e` (4 tests; first-stop test now checks the RGIS side card and the caption).
+Screenshots of every stop reviewed by the agent.
+
+## Batch 4: keys and scrubbing (implemented and checked, awaiting user review)
+
+Requested 2026-10-04:
+- Space pauses / resumes; Shift (or a held click) hurries. Mouse-clicked buttons drop focus so
+  Space never re-presses them. Stop 0 English caption: "As a student, I hand out newspapers…".
+- Scroll wheel / trackpad moves time both ways (about 0.02 s per pixel, a mouse notch ≈ 2 s),
+  from the start to 12 s past the end; sounds scrolled over are skipped, the camera glides,
+  a paused drawing stays paused. The camera now settles exactly once close, so a paused
+  frame is perfectly still. Not on touch screens yet (a drag hurries there).
+
+Evidence: `npm run check` (53 Vitest tests), `npm run e2e` (6 tests; new: Space pauses right
+after clicking Career, Shift hurries, scrolling rewinds and skips ahead while paused).
+
+## Fix: cards drifting along the line (implemented and checked, awaiting user review)
+
+Reported 2026-10-04: INTERVALLES and Accenture cards slid right along the line as it moved.
+Cause: a card stayed open until the next stop, across the connector, and was clamped at the left
+edge once its stop's start scrolled off, so it stopped while the line moved on. Fix:
+- A card is open only while its stop is drawn (t0 to t1), then folds into its tag; the
+  connector and its chapter line have the screen to themselves.
+- An open card is fixed to the line, with no left-edge clamp. On a stop wider than the
+  screen it hangs further along (`cardAnchor` in `src/career/cards.ts`, computed from the
+  viewport) so it is still on screen when the stop ends; its folded tag stays at the stop's start.
+- Cards no longer step sideways for the controls or the caption: they end above them and scroll.
+- Known limit: Transmission is wider than the screen, so its card waits at the right edge for
+  its first seconds until the line reaches it.
+
+Evidence: `npm run check` (54 Vitest tests), `npm run e2e` (7 tests; new: INTERVALLES keeps its
+offset from the line until it folds, red before the fix at 48 px drift).
+`node .agents/scripts/measure-card-positions.mjs --at end|start` at 1440x900 and 1280x720: every
+card on screen at its stop's end (≥ 66 px from the left edge).
+
+## Card style after WAYPOINTS V3 (implemented and checked, awaiting user review)
+
+Requested 2026-10-04, reference https://github.com/Dyrits/WAYPOINTS/tree/V2/V3 (`style.css`, `app.js`
+`cardHTML`). The card body is now a taped paper note (#fbf7ee, tilted 1°, tape strip, centre
+crease, soft shadow) that unfolds from its top edge. Header row: place in red and the card's
+years; remote route in blue (gold for training); each job by company (heading), role (italic),
+dates with pill badges (remote in blue); red ✕ bullet markers. Kept from Lifeline: the folded
+tag and the site's fonts (V3 loads Fraunces and JetBrains Mono from Google Fonts: offered to
+the user, not adopted). Not taken: V3's "En parallèle" list of jobs still running.
+
+Evidence: `npm run check` (54 tests), `npm run e2e` (7 tests); screenshots of four stops reviewed.
+
+## Small requests, 2026-10-04 (implemented and checked, awaiting user review)
+
+- Accenture caption: "des millions de comptes clients … une petite équipe" (no exact number). The card's
+  bullet still says "30 millions" (WAYPOINTS text); offered, not changed.
+- Flight to Australia: a stop with `flight: true` (Merredin) is reached by the line taking off,
+  circling a globe 1.5 times (globe by the detail pen, blue wash) and landing; `flight()` in
+  `src/career/motifs.ts`. Reusable for Asia or the return, not applied there yet.
+  Evidence: `npm run check` (54 tests); screenshots at four moments of the flight.
 
 ## Notes
 
 - Foldkit skill folders the user added to the workspace are not part of this app and are not committed.
-- Handoffs in `.agents/handoffs/` are committed; latest: `.agents/handoffs/2026-10-03-2010-scriptbook-for-visual-review.md`; saved scripts: `.agents/scripts/INDEX.md`.
-- Next step: collect the user's feedback on batch 1 before anything else.
+- Handoffs in `.agents/handoffs/` are committed; latest: `.agents/handoffs/2026-10-04-0135-feedback-batches-and-workspace-setup.md`; saved scripts: `.agents/scripts/INDEX.md`.
+- Deferred and offered work moved to `documentation/backlog.md` (2026-10-04).
+- In progress: the skeleton weed (`skeletonWeed` in `src/career/motifs.ts`) replaced the furrows at
+  the user's request; first version in place, but its flower heads read as squiggles and its leaves
+  as a flat boat. A second pass (bigger heads, rosette leaves angled up) was interrupted, not applied.
+- Next step: finish the skeleton weed, then user review of batches 2 to 5 and the card restyle.
