@@ -1,0 +1,4 @@
+#!/bin/sh
+npx lint-staged
+# build runs tsc --noEmit, then vite build: it is also the typecheck.
+npm run build --if-present
