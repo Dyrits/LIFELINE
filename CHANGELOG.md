@@ -40,3 +40,13 @@ Scope: Tooling
 Summary: The pre-commit hook runs Biome on staged files, with its HTML formatter enabled, then the build; Prettier is not used and Markdown is left unformatted (oxfmt is the candidate if that changes).
 References: `.githooks/pre-commit`, `.lintstagedrc`, `biome.json`; commit eea5ff7.
 Validation: Requested by Dylan ("I'd like to switch to Biome or oxc if possible"), 2026-10-04.
+
+## CHG-0005 · 2026-10-04 · Guidelines split into requirements, a decision record and agent notes
+
+Type: Documentation
+Event: Agreement
+Scope: Project documents
+
+Summary: `GUIDELINES.md` keeps only the portable rule "no user-facing string literals in rendering code". The unbroken line, the French and English pair, French typography and the caption voice move to `documentation/requirements.md`; building stories ahead without the DOM becomes ADR 0001; screenshot verification and confirming caption facts move to `AGENTS.md`. CHG-0002's pointer to `GUIDELINES.md` (Content) now resolves to `documentation/requirements.md` (Content).
+References: `GUIDELINES.md`, `documentation/requirements.md`, `documentation/architecture-decision-record/0001-stories-built-ahead-without-the-dom.md`, `AGENTS.md`.
+Validation: Audit of `GUIDELINES.md` shared by Dylan, 2026-10-04.
