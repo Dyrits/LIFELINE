@@ -115,13 +115,13 @@ export function buildCareer(stops: readonly CareerStop[], today: YearMonth): Tim
   /** While training lasts, the gold thread runs under whatever the ink line draws. */
   const ride = (width: number, dy: (u: number) => number, dur: number) => {
     if (rideUntil === null) return;
-    story.add('C', u => [width * u, dy(u)], { raw: true, dur });
+    story.add('C', u => [width * u, dy(u)], { dur, raw: true });
   };
 
   // Lead-in.
-  story.caption({ fr: 'Ma carrière, d’un seul trait.', en: 'My career, in a single line.' }, 0.6, 4.2);
+  story.caption({ en: 'My career, in a single line.', fr: 'Ma carrière, d’un seul trait.' }, 0.6, 4.2);
   story.T = 0.9;
-  story.cue({ t: 1, kind: 'chord', notes: [48, 55], gap: 0.4, vel: 0.1, dur: 4 });
+  story.cue({ dur: 4, gap: 0.4, kind: 'chord', notes: [48, 55], t: 1, vel: 0.1 });
   story.T += story.add('A', u => [620 * u, 0], { speed: 140, w: u => 0.2 + 0.8 * Math.min(1, u * 5) });
 
   let prevEnd: number | null = null;
@@ -140,13 +140,13 @@ export function buildCareer(stops: readonly CareerStop[], today: YearMonth): Tim
       const at = (p: readonly [number, number]) => [x0 + p[0], y0 + p[1]] as const;
       const [mx, my, mr] = fl.map;
       story.print({
+        land: 'sage',
+        r: mr,
         rings: fl.land.map(r => r.map(at)),
+        sea: 'sky',
+        t: story.T,
         x: x0 + mx,
         y: y0 + my,
-        r: mr,
-        t: story.T,
-        land: 'sage',
-        sea: 'sky',
       });
       let d = 0;
       const arrivals = fl.legs.map((leg, i) => {
@@ -161,11 +161,11 @@ export function buildCareer(stops: readonly CareerStop[], today: YearMonth): Tim
         const dur = Math.min(0.3, (arrivals[i + 1] ?? Infinity) - t - 0.02);
         story.add('D', u => [px + 3.5 * Math.cos(TAU * u), py + 3.5 * Math.sin(TAU * u)], {
           abs: true,
+          dur,
           raw: true,
           t0: t,
-          dur,
         });
-        story.label({ x: px, y: py, text: place.name, t, side: place.side });
+        story.label({ side: place.side, t, text: place.name, x: px, y: py });
       });
       story.plane({ pen: 'A', t0: arrivals[0] ?? story.T, t1: arrivals[route.length - 1] ?? story.T + d });
       const end = fl.legs.at(-1)?.at(-1) ?? [0, 0];
@@ -203,7 +203,7 @@ export function buildCareer(stops: readonly CareerStop[], today: YearMonth): Tim
       if (stop.chapter) story.caption(stop.chapter, told, story.T - told + d + 0.4);
       if (rideUntil !== null && from >= rideUntil) {
         // Training is over: the gold thread rejoins the line and fades.
-        story.add('C', u => [len * u, dy(u) - RIDE * ease(u)], { raw: true, dur: d, a: u => 1 - ease(u) * 0.9 });
+        story.add('C', u => [len * u, dy(u) - RIDE * ease(u)], { a: u => 1 - ease(u) * 0.9, dur: d, raw: true });
         rideUntil = null;
       } else {
         ride(len, dy, d);
@@ -217,12 +217,12 @@ export function buildCareer(stops: readonly CareerStop[], today: YearMonth): Tim
     const t = Math.min(1, index / (stops.length - 1));
     const root = [60, 62, 64, 65, 67, 69, 71, 72][index % 8] ?? 60;
     story.cue({
-      t: t0 + 0.1,
+      dur: 3,
+      gap: 0.2,
       kind: 'chord',
       notes: [root, root + 7, root + 12 + Math.round(t * 4)],
-      gap: 0.2,
+      t: t0 + 0.1,
       vel: 0.09,
-      dur: 3,
     });
 
     const shapes: ShapeMark[] = [];
@@ -241,11 +241,11 @@ export function buildCareer(stops: readonly CareerStop[], today: YearMonth): Tim
         story.blot(x, y0 - 30, 60, 'red', t, 0.6);
         story.add('D', u => [x + 4 * Math.cos(TAU * u), y0 - 30 + 4 * Math.sin(TAU * u)], {
           abs: true,
+          dur: 0.2,
           raw: true,
           t0: t,
-          dur: 0.2,
         });
-        story.label({ x, y: y0 - 48, text: town(place), t, side: 'above' });
+        story.label({ side: 'above', t, text: town(place), x, y: y0 - 48 });
       });
       ride(width, () => 0, d);
       story.T += d;
@@ -273,7 +273,7 @@ export function buildCareer(stops: readonly CareerStop[], today: YearMonth): Tim
         C.y = startY;
         d = story.add('C', strokes([sh.outline]), { speed: 200 });
         const width = exit[0];
-        story.add('A', u => [width * u, 0], { raw: true, dur: d });
+        story.add('A', u => [width * u, 0], { dur: d, raw: true });
         const last = stop.entries[0];
         rideUntil = last.to ? monthIndex(last.to) : now;
       } else {
@@ -291,14 +291,14 @@ export function buildCareer(stops: readonly CareerStop[], today: YearMonth): Tim
     if (need > spent) {
       const d = need - spent;
       const len = 26 * d;
-      story.add('A', u => [len * u, 3 * Math.sin(u * TAU * Math.max(1, Math.round(d / 4)))], { raw: true, dur: d });
+      story.add('A', u => [len * u, 3 * Math.sin(u * TAU * Math.max(1, Math.round(d / 4)))], { dur: d, raw: true });
       ride(len, () => 0, d);
       story.T += d;
     }
 
     // The caption stays up until the next stop begins.
     story.caption(stop.caption, t0 + 0.4, story.T - t0 + 1);
-    marks.push({ index, t0, t1: story.T, x, y, endX: A.x, month: from, shapes });
+    marks.push({ endX: A.x, index, month: from, shapes, t0, t1: story.T, x, y });
     prevEnd = Math.max(prevEnd ?? 0, stopEnd(stop, now));
   });
 
@@ -308,25 +308,25 @@ export function buildCareer(stops: readonly CareerStop[], today: YearMonth): Tim
     const x0 = A.x;
     const y0 = A.y;
     story.add('A', u => [900 * u, -120 * ease(u)], {
-      raw: true,
-      dur: D,
       a: u => 1 - ease(u) * 0.95,
+      dur: D,
+      raw: true,
       w: u => 1 - 0.6 * u,
     });
     story.blot(x0 + 700, y0 - 160, 1300, 'dawn', story.T + 1, 0.7);
-    story.cue({ t: story.T + 0.4, kind: 'chord', notes: [48, 55, 64, 71, 76], gap: 0.45, vel: 0.08, dur: 5 });
+    story.cue({ dur: 5, gap: 0.45, kind: 'chord', notes: [48, 55, 64, 71, 76], t: story.T + 0.4, vel: 0.08 });
     story.T += D;
   }
   const end = story.T;
-  story.caption({ fr: 'Prendre du recul.', en: 'Step back.' }, end + 1.4, 4.5);
+  story.caption({ en: 'Step back.', fr: 'Prendre du recul.' }, end + 1.4, 4.5);
   story.caption(
-    { fr: 'Chaque poste a laissé sa forme sur la ligne.', en: 'Every job left its shape on the line.' },
+    { en: 'Every job left its shape on the line.', fr: 'Chaque poste a laissé sa forme sur la ligne.' },
     end + 6.5,
     Infinity,
   );
-  story.cue({ t: end + 1.2, kind: 'chord', notes: [48, 55, 60, 64, 67, 72], gap: 0.22, vel: 0.1, dur: 6 });
+  story.cue({ dur: 6, gap: 0.22, kind: 'chord', notes: [48, 55, 60, 64, 67, 72], t: end + 1.2, vel: 0.1 });
   story.finish();
-  return { story, stops: marks, end, today: now };
+  return { end, stops: marks, story, today: now };
 }
 
 /**
@@ -348,8 +348,8 @@ export function monthAt({ stops, end, today }: Timeline, t: number): number {
 
 /** The town of a place written "Town, Country". */
 const town = (place: Text): Text => ({
-  fr: place.fr.split(', ')[0] ?? place.fr,
   en: place.en.split(', ')[0] ?? place.en,
+  fr: place.fr.split(', ')[0] ?? place.fr,
 });
 
 /** Lays a shape's watercolour wash halfway through drawing it, and its small coloured spots once it is done. */
@@ -369,7 +369,7 @@ function details(story: Story, pen: string, list: readonly Stroke[], x: number, 
   th.y = y;
   const lag = outlineDur * DETAIL_LAG;
   const dur = Math.min(inkLength(list) / DETAIL_SPEED, Math.max(outlineDur * (1 - DETAIL_LAG), 2.5));
-  story.add(pen, strokes(list), { t0: story.T + lag, dur });
+  story.add(pen, strokes(list), { dur, t0: story.T + lag });
   return lag + dur;
 }
 
@@ -423,10 +423,10 @@ function signpost(story: Story, x: number, y: number, from: Text, to: Text, dur:
   ].map(s => s.map(([px, py]) => [x + px, y + py] as const));
   const t0 = story.T + dur * 0.15;
   const draw = Math.min(2.2, dur * 0.5);
-  story.add('D', strokes(list), { abs: true, t0, dur: draw });
+  story.add('D', strokes(list), { abs: true, dur: draw, t0 });
   story.blot(x, y - 90, 200, 'ochre', t0 + draw * 0.6, 0.5);
-  story.label({ x: x - 36, y: y - 108, text: from, t: t0 + draw * 0.75, side: 'centre' });
-  story.label({ x: x + 36, y: y - 72, text: to, t: t0 + draw, side: 'centre' });
+  story.label({ side: 'centre', t: t0 + draw * 0.75, text: from, x: x - 36, y: y - 108 });
+  story.label({ side: 'centre', t: t0 + draw, text: to, x: x + 36, y: y - 72 });
 }
 
 /** Teaching: the line carries on while apprentice threads branch off it and go their own way. */
@@ -446,9 +446,9 @@ function apprentices(story: Story): number {
     story.add(
       `P${k}`,
       u => [len * u, -lift * ease(Math.min(1, u * 2.2)) + 8 * Math.sin(u * TAU * 2) - wave(f) + wave(f + (1 - f) * u)],
-      { raw: true, t0: story.T + f * D, dur: (1 - f) * D, a: u => 1 - ease(u) * 0.8, w: u => Math.min(1, 0.2 + u * 6) },
+      { a: u => 1 - ease(u) * 0.8, dur: (1 - f) * D, raw: true, t0: story.T + f * D, w: u => Math.min(1, 0.2 + u * 6) },
     );
-    story.cue({ t: story.T + f * D, kind: 'note', note: [79, 83, 86][k] ?? 79, vel: 0.07, dur: 2 });
+    story.cue({ dur: 2, kind: 'note', note: [79, 83, 86][k] ?? 79, t: story.T + f * D, vel: 0.07 });
   });
   story.blot(x0 + L * 0.55, y0 - 90, 900, 'dawn', story.T + D * 0.4, 0.7);
   return D;

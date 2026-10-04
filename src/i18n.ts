@@ -1,28 +1,28 @@
 import { LANGS, type Lang, type Text, type YearMonth } from './data/types';
 
-const t = (fr: string, en: string): Text => ({ fr, en });
+const t = (fr: string, en: string): Text => ({ en, fr });
 
 export const UI = {
-  tagline: t('Une histoire tracée d’un seul trait.', 'A story told with a single line.'),
-  life: t('Vie', 'Life'),
-  career: t('Carrière', 'Career'),
-  soon: t('bientôt', 'soon'),
-  choose: t('Choisir un chemin · son activé', 'Choose a path · sound on'),
-  soundOn: t('Son activé', 'Sound on'),
-  soundOff: t('Son coupé', 'Sound off'),
   again: t('Retracer', 'Draw it again'),
   back: t('Chemins', 'Paths'),
+  career: t('Carrière', 'Career'),
+  choose: t('Choisir un chemin · son activé', 'Choose a path · sound on'),
+  close: t('Fermer', 'Close'),
   hint: t(
     'Maj ou clic maintenu pour accélérer · Espace pause · Molette pour avancer ou reculer · ← → étapes',
     'Hold Shift or click to hurry · Space to pause · Scroll to rewind or skip ahead · ← → stops',
   ),
-  pause: t('Pause', 'Pause'),
-  resume: t('Reprendre', 'Play'),
-  remote: t('À distance', 'Remote'),
-  workedFrom: t('Travaillé depuis', 'Worked from'),
+  life: t('Vie', 'Life'),
   onSite: t('sur place', 'on site'),
+  pause: t('Pause', 'Pause'),
+  remote: t('À distance', 'Remote'),
+  resume: t('Reprendre', 'Play'),
+  soon: t('bientôt', 'soon'),
+  soundOff: t('Son coupé', 'Sound off'),
+  soundOn: t('Son activé', 'Sound on'),
+  tagline: t('Une histoire tracée d’un seul trait.', 'A story told with a single line.'),
   today: t('aujourd’hui', 'today'),
-  close: t('Fermer', 'Close'),
+  workedFrom: t('Travaillé depuis', 'Worked from'),
 } as const satisfies Record<string, Text>;
 
 const STORAGE_KEY = 'lifeline.lang';
@@ -50,8 +50,8 @@ export function saveLang(lang: Lang): void {
 }
 
 const formats: Record<Lang, Intl.DateTimeFormat> = {
-  fr: new Intl.DateTimeFormat('fr-FR', { month: 'short', year: 'numeric' }),
   en: new Intl.DateTimeFormat('en-GB', { month: 'short', year: 'numeric' }),
+  fr: new Intl.DateTimeFormat('fr-FR', { month: 'short', year: 'numeric' }),
 };
 
 export const monthYear = (ym: YearMonth, lang: Lang): string => {

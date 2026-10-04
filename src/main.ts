@@ -47,13 +47,13 @@ function baseline(t: number): number {
 }
 
 const player = new Player(renderer, career.story, career.end, audio, {
-  order: ['P0', 'P1', 'P2', 'C', 'CD', 'D', 'A'],
+  baseline,
   follow: [
     ['A', 1],
     ['C', 0.5],
   ],
   lead: 'A',
-  baseline,
+  order: ['P0', 'P1', 'P2', 'C', 'CD', 'D', 'A'],
 });
 const cards = new CardLayer($('#cards'), CAREER, marks);
 
@@ -190,7 +190,7 @@ function frame(ts: number): void {
   last = ts;
   if (started) {
     player.update(dt, !paused);
-    cards.update(player, renderer, { hud: hudEl.getBoundingClientRect(), caption: captionBox() });
+    cards.update(player, renderer, { caption: captionBox(), hud: hudEl.getBoundingClientRect() });
     updateCaption();
     updateYear();
     progEl.style.width = `${player.progress * 100}%`;

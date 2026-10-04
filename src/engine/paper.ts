@@ -2,15 +2,15 @@ import { mulberry, TAU } from './math';
 
 export const PIGMENTS = {
   blue: [92, 118, 152],
-  sun: [236, 170, 60],
-  rose: [222, 118, 118],
-  red: [196, 56, 58],
-  ochre: [214, 160, 96],
-  window: [246, 188, 64],
-  sky: [118, 160, 202],
-  grey: [104, 110, 124],
-  sage: [128, 156, 112],
   dawn: [244, 182, 108],
+  grey: [104, 110, 124],
+  ochre: [214, 160, 96],
+  red: [196, 56, 58],
+  rose: [222, 118, 118],
+  sage: [128, 156, 112],
+  sky: [118, 160, 202],
+  sun: [236, 170, 60],
+  window: [246, 188, 64],
 } as const satisfies Record<string, readonly [number, number, number]>;
 export type Pigment = keyof typeof PIGMENTS;
 

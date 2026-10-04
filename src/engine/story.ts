@@ -101,7 +101,7 @@ export class Story {
   }
 
   thread(name: string, colour: string, width: number, seed: number): Thread {
-    const th: Thread = { colour, width, seed, pts: [], x: 0, y: 0, n: 0 };
+    const th: Thread = { colour, n: 0, pts: [], seed, width, x: 0, y: 0 };
     this.threads.set(name, th);
     return th;
   }
@@ -174,9 +174,9 @@ export class Story {
         let e = prevI;
         while (e < i && Boolean((dense[e + 1] as PathPoint)[2]) === prevUp) e++;
         const edge = dense[e] as PathPoint;
-        th.pts.push({ ...jitter(edge[0], edge[1]), t, w, a: alpha, up: prevUp });
+        th.pts.push({ ...jitter(edge[0], edge[1]), a: alpha, t, up: prevUp, w });
       }
-      th.pts.push({ ...jitter(lerp(a[0], b[0], r), lerp(a[1], b[1], r)), t, w, a: alpha, up });
+      th.pts.push({ ...jitter(lerp(a[0], b[0], r), lerp(a[1], b[1], r)), a: alpha, t, up, w });
       prevI = i;
       prevUp = up;
     }
@@ -192,11 +192,11 @@ export class Story {
 
   blot(x: number, y: number, size: number, pigment: Pigment, t: number, a = 1): void {
     this.blotSeed += 101;
-    this.blots.push({ x, y, size, pigment, t, a, seed: this.blotSeed });
+    this.blots.push({ a, pigment, seed: this.blotSeed, size, t, x, y });
   }
 
   caption(text: Text, t = this.T, dur = 6.5): void {
-    this.captions.push({ t, text, dur });
+    this.captions.push({ dur, t, text });
   }
 
   print(p: Print): void {
@@ -216,7 +216,7 @@ export class Story {
   }
 
   bounds(): Bounds {
-    const b: Bounds = { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity };
+    const b: Bounds = { x0: Infinity, x1: -Infinity, y0: Infinity, y1: -Infinity };
     for (const th of this.threads.values()) {
       for (const p of th.pts) {
         if (p.a < 0.05) continue;

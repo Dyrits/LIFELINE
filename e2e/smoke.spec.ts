@@ -91,7 +91,7 @@ test('pausing freezes the drawing; the year and controls stay in view', async ({
         last = now;
         return still;
       },
-      { timeout: 10000, intervals: [300] },
+      { intervals: [300], timeout: 10000 },
     )
     .toBe(true);
   const before = await pixels();

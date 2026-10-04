@@ -80,3 +80,13 @@ Scope: Tooling
 Summary: `noExplicitAny` is raised from a warning to an error, and every applicable Biome sorting action is on (imports, object keys, CSS properties, HTML attributes, type fields, interface and enum members, `package.json`). The existing code is not yet sorted, so `npm run check` fails until `biome check --write` is applied.
 References: `biome.json`.
 Validation: Requested by Dylan ("Avoid as any"; "most of the sorting options it has should be on"), 2026-10-04.
+
+## CHG-0009 · 2026-10-04 · Existing code sorted by Biome
+
+Type: Configuration
+Event: Delivery
+Scope: Tooling
+
+Summary: `biome check --write .` applied the sorting agreed in CHG-0008 across 15 files. `useSortedKeys` is off for `package.json` only: it fought `useSortedPackageJson` over the same keys and looped forever.
+References: CHG-0008; `biome.json` (`overrides`).
+Validation: `npm run check` (tsc, Biome, 58 Vitest tests) and `npm run e2e` (7 Playwright tests) pass. Screenshots of the intro and the 21 Career stops before and after match by eye. No CSS shorthand moved after its longhand; the two swapped pairs (`#again` `border`/`border-radius`, `.card .body` `transform`/`transform-origin`) don't override each other.

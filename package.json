@@ -1,17 +1,17 @@
 {
   "name": "lifeline",
-  "private": true,
   "version": "0.1.0",
+  "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite",
     "build": "tsc --noEmit && vite build",
-    "preview": "vite preview",
     "check": "tsc --noEmit && biome check . && vitest run",
-    "format": "biome check --write .",
-    "test": "vitest run",
+    "dev": "vite",
     "e2e": "playwright test",
-    "prepare": "git config core.hooksPath .githooks"
+    "format": "biome check --write .",
+    "prepare": "git config core.hooksPath .githooks",
+    "preview": "vite preview",
+    "test": "vitest run"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.15",

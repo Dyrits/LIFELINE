@@ -5,7 +5,7 @@ import { monthSpan, UI } from '../i18n';
 import type { StopMark } from './build';
 
 const esc = (s: string): string =>
-  s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] ?? c);
+  s.replace(/[&<>"']/g, c => ({ "'": '&#39;', '"': '&quot;', '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c] ?? c);
 
 /** The entries a stop's card tells: all of them, or only the first when the stop is split. */
 const ownEntries = (s: CareerStop): readonly Entry[] => (s.split ? s.entries.slice(0, 1) : s.entries);
@@ -115,7 +115,7 @@ export class CardLayer {
       if (this.pinned === stop) this.pinned = null;
     });
     this.root.append(el);
-    return { el, tag, inner, stop, entries, shape, x: 0, y: 0, placed: false };
+    return { el, entries, inner, placed: false, shape, stop, tag, x: 0, y: 0 };
   }
 
   render(lang: Lang): void {

@@ -1,7 +1,7 @@
 // Career content, adapted from WAYPOINTS data.js. Stops are drawn in the order listed (oldest first).
 import type { CareerStop, Profile, Text } from './types';
 
-const t = (fr: string, en: string): Text => ({ fr, en });
+const t = (fr: string, en: string): Text => ({ en, fr });
 
 const FRANCE = t('France', 'France');
 const AUSTRALIA = t('Australie', 'Australia');
@@ -10,58 +10,47 @@ const WORKING_HOLIDAY = t('Visa vacances-travail', 'Working holiday visa');
 const FRONT_END = t('Développeur front-end', 'Front-end developer');
 
 export const PROFILE: Profile = {
+  location: t('Saint-Herblain, France', 'Saint-Herblain, France'),
   name: 'Dylan J. Gerrits',
-  title: t(
-    'Ingénieur polyvalent en architecture et développement de systèmes d’information et d’outillage IA',
-    'Versatile engineer in information systems architecture, development and AI tooling',
-  ),
   tagline: t(
     'Véritable couteau franco-suisse, plus de dix ans à concevoir, développer et mettre en production des solutions logicielles, de l’architecture au déploiement.',
     'A true Franco-Swiss army knife: over ten years designing, building and shipping software, from architecture to deployment.',
   ),
-  location: t('Saint-Herblain, France', 'Saint-Herblain, France'),
+  title: t(
+    'Ingénieur polyvalent en architecture et développement de systèmes d’information et d’outillage IA',
+    'Versatile engineer in information systems architecture, development and AI tooling',
+  ),
 };
 
 export const CAREER: readonly CareerStop[] = [
   {
-    kind: 'job',
-    place: t('Lyon', 'Lyon'),
-    country: FRANCE,
-    motifs: ['newspaper', 'barcode'],
-    split: true,
     caption: t(
       'Étudiant, je distribue des journaux et je compte des étagères. Il faut bien payer le loyer.',
       'As a student, I hand out newspapers and count shelves. Rent doesn’t pay itself.',
     ),
+    country: FRANCE,
     entries: [
       {
         company: 'INTERVALLES',
-        role: t('Démarcheur / Distributeur', 'Street canvasser / Distributor'),
         from: '2011-03',
+        role: t('Démarcheur / Distributeur', 'Street canvasser / Distributor'),
         to: '2012-06',
       },
-      { company: 'RGIS', role: t('Inventoriste', 'Inventory clerk'), from: '2011-03', to: '2011-04' },
+      { company: 'RGIS', from: '2011-03', role: t('Inventoriste', 'Inventory clerk'), to: '2011-04' },
     ],
+    kind: 'job',
+    motifs: ['newspaper', 'barcode'],
+    place: t('Lyon', 'Lyon'),
+    split: true,
   },
   {
-    kind: 'job',
-    place: t('Nantes', 'Nantes'),
-    country: FRANCE,
-    motifs: ['bolt'],
     caption: t(
       'Premier poste de développeur : des millions de comptes clients, et bientôt une petite équipe à coordonner.',
       'First developer job: millions of customer accounts, and soon a small team to lead.',
     ),
+    country: FRANCE,
     entries: [
       {
-        company: 'Accenture',
-        role: t('Développeur | Chef d’équipe', 'Developer | Team lead'),
-        from: '2013-06',
-        to: '2016-08',
-        summary: t(
-          'Développement, maintenance applicative et coordination pour des fournisseurs d’énergie, en environnements SAP IS-U et CRM.',
-          'Development, application maintenance and coordination for energy suppliers, on SAP IS-U and CRM.',
-        ),
         bullets: [
           t(
             'Pilotage d’un traitement de refacturation de 30 millions de comptes clients.',
@@ -77,101 +66,103 @@ export const CAREER: readonly CareerStop[] = [
           ),
           t('Automatisation des rapports d’activité quotidiens.', 'Automated the daily activity reports.'),
         ],
+        company: 'Accenture',
+        from: '2013-06',
+        role: t('Développeur | Chef d’équipe', 'Developer | Team lead'),
+        summary: t(
+          'Développement, maintenance applicative et coordination pour des fournisseurs d’énergie, en environnements SAP IS-U et CRM.',
+          'Development, application maintenance and coordination for energy suppliers, on SAP IS-U and CRM.',
+        ),
+        to: '2016-08',
       },
     ],
+    kind: 'job',
+    motifs: ['bolt'],
+    place: t('Nantes', 'Nantes'),
   },
   {
-    kind: 'job',
-    place: t('Merredin', 'Merredin'),
-    country: AUSTRALIA,
-    motifs: ['skeletonWeed'],
-    // The way Dylan went to Australia, its main stops (Dylan, 2026-10-04).
-    route: [
-      { name: t('Genève', 'Geneva'), at: [6.1, 46.2], side: 'right' },
-      { name: t('Moscou', 'Moscow'), at: [37.6, 55.8], side: 'above' },
-      { name: t('Bangkok', 'Bangkok'), at: [100.5, 13.8], side: 'right' },
-      { name: t('Kuala Lumpur', 'Kuala Lumpur'), at: [101.7, 3.1], side: 'left' },
-      { name: t('Singapour', 'Singapore'), at: [103.8, 1.3], side: 'right' },
-      { name: t('Jakarta', 'Jakarta'), at: [106.8, -6.2], side: 'left' },
-      { name: t('Perth', 'Perth'), at: [115.9, -31.9], side: 'left' },
-    ],
+    caption: t('Dans des champs sans fin, je traque les mauvaises herbes.', 'In endless fields, I hunt weeds.'),
     chapter: t(
       'Trois ans plus tard, je pose le clavier pour voyager. J’atteris en l’Australie, un visa vacances-travail en poche.',
       'Three years in, I put the keyboard down to travel. I land in Australia, a working holiday visa in my pocket.',
     ),
-    caption: t('Dans des champs sans fin, je traque les mauvaises herbes.', 'In endless fields, I hunt weeds.'),
+    country: AUSTRALIA,
     entries: [
       {
         company: 'CWC Professional AG Contractors',
-        role: t('Contractant agricole', 'Agricultural contractor'),
+        context: WORKING_HOLIDAY,
         from: '2016-11',
-        to: '2016-12',
+        role: t('Contractant agricole', 'Agricultural contractor'),
         summary: t(
           'Détection de Chondrilla juncea dans les champs, dans le cadre d’un visa vacances-travail.',
           'Scouting fields for Chondrilla juncea (skeleton weed) on a working holiday visa.',
         ),
-        context: WORKING_HOLIDAY,
+        to: '2016-12',
       },
+    ],
+    kind: 'job',
+    motifs: ['skeletonWeed'],
+    place: t('Merredin', 'Merredin'),
+    // The way Dylan went to Australia, its main stops (Dylan, 2026-10-04).
+    route: [
+      { at: [6.1, 46.2], name: t('Genève', 'Geneva'), side: 'right' },
+      { at: [37.6, 55.8], name: t('Moscou', 'Moscow'), side: 'above' },
+      { at: [100.5, 13.8], name: t('Bangkok', 'Bangkok'), side: 'right' },
+      { at: [101.7, 3.1], name: t('Kuala Lumpur', 'Kuala Lumpur'), side: 'left' },
+      { at: [103.8, 1.3], name: t('Singapour', 'Singapore'), side: 'right' },
+      { at: [106.8, -6.2], name: t('Jakarta', 'Jakarta'), side: 'left' },
+      { at: [115.9, -31.9], name: t('Perth', 'Perth'), side: 'left' },
     ],
   },
   {
-    kind: 'job',
-    place: t('Perth', 'Perth'),
-    country: AUSTRALIA,
-    motifs: ['pan'],
     caption: t(
       'Une cuisine de bar, des services qui s’enchaînent. Les mains apprennent autre chose.',
       'A bar kitchen, one shift after another. My hands learn something new.',
     ),
+    country: AUSTRALIA,
     entries: [
       {
         company: 'Gramercy Bar & Kitchen',
-        role: t('Commis de cuisine', 'Kitchen hand'),
-        from: '2017-01',
-        to: '2017-07',
         context: WORKING_HOLIDAY,
+        from: '2017-01',
+        role: t('Commis de cuisine', 'Kitchen hand'),
+        to: '2017-07',
       },
     ],
+    kind: 'job',
+    motifs: ['pan'],
+    place: t('Perth', 'Perth'),
   },
   {
-    kind: 'job',
-    place: t('Dubbo', 'Dubbo'),
-    country: AUSTRALIA,
-    signpost: true,
-    motifs: ['pickets'],
     caption: t(
       'Retour à la terre : du bétail et des moutons à marquer.',
       'Back on the land, marking cattle and sheep.',
     ),
+    country: AUSTRALIA,
     entries: [
       {
         company: 'J.A. Long & L.A. Cameron',
-        role: t('Contractant agricole', 'Agricultural contractor'),
-        from: '2017-09',
-        to: '2017-11',
-        summary: t('Marquage bovin et ovin.', 'Cattle and sheep marking.'),
         context: WORKING_HOLIDAY,
+        from: '2017-09',
+        role: t('Contractant agricole', 'Agricultural contractor'),
+        summary: t('Marquage bovin et ovin.', 'Cattle and sheep marking.'),
+        to: '2017-11',
       },
     ],
+    kind: 'job',
+    motifs: ['pickets'],
+    place: t('Dubbo', 'Dubbo'),
+    signpost: true,
   },
   {
-    kind: 'job',
-    place: t('Ubud', 'Ubud'),
-    country: t('Indonésie', 'Indonesia'),
-    motifs: ['candiBentar', 'browserGallery'],
-    way: 'backpack',
-    chapter: t('L’Asie, sac au dos.', 'Asia, backpack on.'),
     caption: t(
       'À Bali, je rouvre l’ordinateur. Le code peut voyager avec moi.',
       'In Bali I open the laptop again. Code can travel with me.',
     ),
+    chapter: t('L’Asie, sac au dos.', 'Asia, backpack on.'),
+    country: t('Indonésie', 'Indonesia'),
     entries: [
       {
-        company: 'Freelance',
-        role: FRONT_END,
-        from: '2017-11',
-        to: '2017-12',
-        summary: t('Site vitrine pour un menuisier.', 'Showcase website for a carpenter.'),
         bullets: [
           t(
             'Galerie de réalisations filtrable par projet et matériau.',
@@ -182,18 +173,47 @@ export const CAREER: readonly CareerStop[] = [
             'Quote form with an automatic preliminary estimate.',
           ),
         ],
+        company: 'Freelance',
+        from: '2017-11',
+        role: FRONT_END,
+        summary: t('Site vitrine pour un menuisier.', 'Showcase website for a carpenter.'),
+        to: '2017-12',
       },
     ],
+    kind: 'job',
+    motifs: ['candiBentar', 'browserGallery'],
+    place: t('Ubud', 'Ubud'),
+    way: 'backpack',
   },
   {
-    kind: 'job',
-    place: t('George Town', 'George Town'),
-    country: MALAYSIA,
-    motifs: ['browserCode'],
     caption: t(
       'Nomade, je construis une plateforme pour une agence de voyage, depuis la route.',
       'On the move, I build a platform for a travel agency, from the road.',
     ),
+    country: MALAYSIA,
+    entries: [
+      {
+        bullets: [
+          t('Interfaces de réservation et paiement en ligne.', 'Booking and online payment interfaces.'),
+          t(
+            'Espace opérateurs pour gérer le catalogue d’activités.',
+            'Operator area to manage the activity catalogue.',
+          ),
+          t('Interface bilingue anglais / malais.', 'Bilingual English / Malay interface.'),
+        ],
+        company: 'Freelance',
+        from: '2018-02',
+        role: FRONT_END,
+        summary: t(
+          'Plateforme de réservation d’activités pour une agence touristique et deux prestataires.',
+          'Activity booking platform for a travel agency and two operators.',
+        ),
+        to: '2018-04',
+      },
+    ],
+    kind: 'job',
+    motifs: ['browserCode'],
+    place: t('George Town', 'George Town'),
     remoteFrom: [
       t('Munich, Allemagne', 'Munich, Germany'),
       t('Prague, Tchéquie', 'Prague, Czechia'),
@@ -203,71 +223,39 @@ export const CAREER: readonly CareerStop[] = [
       t('Sofia, Bulgarie', 'Sofia, Bulgaria'),
       t('Bangkok, Thaïlande', 'Bangkok, Thailand'),
     ],
-    entries: [
-      {
-        company: 'Freelance',
-        role: FRONT_END,
-        from: '2018-02',
-        to: '2018-04',
-        summary: t(
-          'Plateforme de réservation d’activités pour une agence touristique et deux prestataires.',
-          'Activity booking platform for a travel agency and two operators.',
-        ),
-        bullets: [
-          t('Interfaces de réservation et paiement en ligne.', 'Booking and online payment interfaces.'),
-          t(
-            'Espace opérateurs pour gérer le catalogue d’activités.',
-            'Operator area to manage the activity catalogue.',
-          ),
-          t('Interface bilingue anglais / malais.', 'Bilingual English / Malay interface.'),
-        ],
-      },
-    ],
   },
   {
-    kind: 'job',
-    place: t('Taichung', 'Taichung'),
-    country: t('Taïwan', 'Taiwan'),
-    motifs: ['browserCalendar'],
     caption: t(
       'Un hôtel à Taïwan, ses chambres, sa réservation en ligne.',
       'A hotel in Taiwan, its rooms, its online booking.',
     ),
+    country: t('Taïwan', 'Taiwan'),
     entries: [
       {
-        company: 'Freelance',
-        role: FRONT_END,
-        from: '2018-05',
-        to: '2018-06',
-        summary: t('Site web d’un hôtel et son parcours de réservation.', 'Hotel website and its booking flow.'),
         bullets: [
           t('Calendrier interactif des disponibilités.', 'Interactive availability calendar.'),
           t('Parcours de paiement en ligne.', 'Online payment flow.'),
           t('Galerie photo filtrable par type de chambre.', 'Photo gallery filterable by room type.'),
         ],
+        company: 'Freelance',
+        from: '2018-05',
+        role: FRONT_END,
+        summary: t('Site web d’un hôtel et son parcours de réservation.', 'Hotel website and its booking flow.'),
+        to: '2018-06',
       },
     ],
+    kind: 'job',
+    motifs: ['browserCalendar'],
+    place: t('Taichung', 'Taichung'),
   },
   {
-    kind: 'job',
-    place: t('Kuala Lumpur', 'Kuala Lumpur'),
-    country: MALAYSIA,
-    motifs: ['ambulance'],
     caption: t(
       'Je passe côté serveur, pour aider des ambulances à trouver le bon hôpital.',
       'I move to the back end, helping ambulances find the right hospital.',
     ),
-    remoteFrom: [t('Langkawi, Malaisie', 'Langkawi, Malaysia')],
+    country: MALAYSIA,
     entries: [
       {
-        company: 'Freelance',
-        role: t('Développeur back-end', 'Back-end developer'),
-        from: '2018-09',
-        to: '2018-12',
-        summary: t(
-          'API de géolocalisation et d’aide à l’orientation pour une société d’ambulances.',
-          'Geolocation and dispatch-routing API for an ambulance company.',
-        ),
         bullets: [
           t(
             'Calcul d’itinéraires selon spécialité médicale, distance et trafic.',
@@ -280,74 +268,74 @@ export const CAREER: readonly CareerStop[] = [
           ),
           t('CI/CD avec GitLab, Docker et Amazon EC2.', 'CI/CD with GitLab, Docker and Amazon EC2.'),
         ],
+        company: 'Freelance',
+        from: '2018-09',
+        role: t('Développeur back-end', 'Back-end developer'),
+        summary: t(
+          'API de géolocalisation et d’aide à l’orientation pour une société d’ambulances.',
+          'Geolocation and dispatch-routing API for an ambulance company.',
+        ),
+        to: '2018-12',
       },
     ],
+    kind: 'job',
+    motifs: ['ambulance'],
+    place: t('Kuala Lumpur', 'Kuala Lumpur'),
+    remoteFrom: [t('Langkawi, Malaisie', 'Langkawi, Malaysia')],
   },
   {
-    kind: 'job',
-    place: t('Malacca', 'Malacca'),
-    country: MALAYSIA,
-    motifs: ['bars'],
     caption: t('Pour la première fois, c’est moi qui mène le projet.', 'For the first time, I lead the project.'),
-    remoteFrom: [
-      t('Die, France', 'Die, France'),
-      t('Lyon, France', 'Lyon, France'),
-      t('Nantes, France', 'Nantes, France'),
-    ],
+    country: MALAYSIA,
     entries: [
       {
-        company: 'Freelance',
-        role: t('(Lead) Développeur front-end', '(Lead) Front-end developer'),
-        from: '2019-01',
-        to: '2019-06',
-        summary: t(
-          'Front-end d’une application serverless de gestion budgétaire pour un indépendant.',
-          'Front end of a serverless budgeting app for a self-employed client.',
-        ),
         bullets: [
           t('Tableaux de bord et visualisations revenus / dépenses.', 'Income / expense dashboards and charts.'),
           t('Catégories et dépenses récurrentes.', 'Categories and recurring expenses.'),
           t('Exports CSV filtrables et personnalisables.', 'Filterable, customisable CSV exports.'),
         ],
+        company: 'Freelance',
+        from: '2019-01',
+        role: t('(Lead) Développeur front-end', '(Lead) Front-end developer'),
+        summary: t(
+          'Front-end d’une application serverless de gestion budgétaire pour un indépendant.',
+          'Front end of a serverless budgeting app for a self-employed client.',
+        ),
+        to: '2019-06',
       },
+    ],
+    kind: 'job',
+    motifs: ['bars'],
+    place: t('Malacca', 'Malacca'),
+    remoteFrom: [
+      t('Die, France', 'Die, France'),
+      t('Lyon, France', 'Lyon, France'),
+      t('Nantes, France', 'Nantes, France'),
     ],
   },
   {
-    kind: 'job',
-    place: t('Bouguenais', 'Bouguenais'),
-    country: FRANCE,
-    motifs: ['plane'],
-    chapter: t('La France, le retour.', 'France, coming home.'),
     caption: t('Entre deux contrats, je travaille sur le tarmac.', 'Between contracts, I work on the tarmac.'),
+    chapter: t('La France, le retour.', 'France, coming home.'),
+    country: FRANCE,
     entries: [
       {
         company: 'AviaPartner Nantes-Atlantique',
-        role: t('Agent de trafic', 'Ramp agent'),
         from: '2019-11',
+        role: t('Agent de trafic', 'Ramp agent'),
         to: '2019-12',
       },
     ],
+    kind: 'job',
+    motifs: ['plane'],
+    place: t('Bouguenais', 'Bouguenais'),
   },
   {
-    kind: 'job',
-    place: t('Kuala Lumpur', 'Kuala Lumpur'),
-    country: MALAYSIA,
-    motifs: ['bubble'],
     caption: t(
       'Depuis Nantes, un chatbot pour une plateforme à l’autre bout du monde.',
       'From Nantes, a chatbot for a platform on the other side of the world.',
     ),
-    remoteFrom: [t('Nantes, France', 'Nantes, France')],
+    country: MALAYSIA,
     entries: [
       {
-        company: 'Freelance',
-        role: t('Développeur full-stack', 'Full-stack developer'),
-        from: '2020-02',
-        to: '2020-05',
-        summary: t(
-          'Outil de support client automatisé pour une plateforme multiservice.',
-          'Automated customer support tool for a multi-service platform.',
-        ),
         bullets: [
           t(
             'Chatbot adossé à une base de plus de 500 questions fréquentes.',
@@ -358,18 +346,43 @@ export const CAREER: readonly CareerStop[] = [
             'Admin interface to keep the knowledge base alive.',
           ),
         ],
+        company: 'Freelance',
+        from: '2020-02',
+        role: t('Développeur full-stack', 'Full-stack developer'),
+        summary: t(
+          'Outil de support client automatisé pour une plateforme multiservice.',
+          'Automated customer support tool for a multi-service platform.',
+        ),
+        to: '2020-05',
       },
     ],
+    kind: 'job',
+    motifs: ['bubble'],
+    place: t('Kuala Lumpur', 'Kuala Lumpur'),
+    remoteFrom: [t('Nantes, France', 'Nantes, France')],
   },
   {
-    kind: 'training',
-    place: t('En ligne', 'Online'),
-    label: t('Formation', 'Training'),
-    motifs: ['mortarboard'],
     caption: t(
       'J’officialise ce que la route m’a appris : un titre de développeur.',
       'I make official what the road taught me: a developer’s diploma.',
     ),
+    entries: [
+      {
+        company: 'ENI École Informatique',
+        from: '2020-06',
+        remote: true,
+        role: t('Développeur web et web mobile', 'Web and mobile web developer'),
+        summary: t(
+          'Titre professionnel de niveau 5 (Bac+2) : Java, Java EE, PHP et Symfony, SQL Server, JavaScript, Android.',
+          'Level 5 professional title (two-year degree): Java, Java EE, PHP and Symfony, SQL Server, JavaScript, Android.',
+        ),
+        to: '2020-11',
+      },
+    ],
+    kind: 'training',
+    label: t('Formation', 'Training'),
+    motifs: ['mortarboard'],
+    place: t('En ligne', 'Online'),
     remoteFrom: [
       t('Die, France', 'Die, France'),
       t('Londres, Royaume-Uni', 'London, United Kingdom'),
@@ -379,69 +392,44 @@ export const CAREER: readonly CareerStop[] = [
       t('Istanbul, Turquie', 'Istanbul, Türkiye'),
       t('Die, France', 'Die, France'),
     ],
-    entries: [
-      {
-        company: 'ENI École Informatique',
-        role: t('Développeur web et web mobile', 'Web and mobile web developer'),
-        from: '2020-06',
-        to: '2020-11',
-        remote: true,
-        summary: t(
-          'Titre professionnel de niveau 5 (Bac+2) : Java, Java EE, PHP et Symfony, SQL Server, JavaScript, Android.',
-          'Level 5 professional title (two-year degree): Java, Java EE, PHP and Symfony, SQL Server, JavaScript, Android.',
-        ),
-      },
-    ],
   },
   {
-    kind: 'job',
-    place: t('Biarritz', 'Biarritz'),
-    country: FRANCE,
-    motifs: ['book'],
     caption: t(
       'Une plateforme de cours, conçue et livrée en deux semaines.',
       'A course platform, designed and shipped in two weeks.',
     ),
-    remoteFrom: [t('Istanbul, Turquie', 'Istanbul, Türkiye'), t('Die, France', 'Die, France')],
+    country: FRANCE,
     entries: [
       {
-        company: 'The Inspire Academy',
-        role: t('Développeur full-stack', 'Full-stack developer'),
-        from: '2020-11',
-        to: '2021-01',
-        summary: t(
-          'Application de vente de cours et de réservation de cours particuliers, conçue et livrée en deux semaines.',
-          'App for selling courses and booking private lessons, designed and shipped in two weeks.',
-        ),
         bullets: [
           t('Achats de modules et crédits de réservation.', 'Module purchases and booking credits.'),
           t('Gestion des utilisateurs et paiements en ligne.', 'User management and online payments.'),
           t('Blog avec administration et modération.', 'Blog with administration and moderation.'),
           t('Contenus interactifs pour l’anglais et l’espagnol.', 'Interactive content for English and Spanish.'),
         ],
+        company: 'The Inspire Academy',
+        from: '2020-11',
+        role: t('Développeur full-stack', 'Full-stack developer'),
+        summary: t(
+          'Application de vente de cours et de réservation de cours particuliers, conçue et livrée en deux semaines.',
+          'App for selling courses and booking private lessons, designed and shipped in two weeks.',
+        ),
+        to: '2021-01',
       },
     ],
+    kind: 'job',
+    motifs: ['book'],
+    place: t('Biarritz', 'Biarritz'),
+    remoteFrom: [t('Istanbul, Turquie', 'Istanbul, Türkiye'), t('Die, France', 'Die, France')],
   },
   {
-    kind: 'job',
-    place: t('Istanbul', 'Istanbul'),
-    country: t('Turquie', 'Türkiye'),
-    motifs: ['frame'],
     caption: t(
       'À Istanbul, je mène l’équipe d’une plateforme pour un collectif d’artistes.',
       'In Istanbul, I lead the team behind a platform for an artists’ collective.',
     ),
-    remoteFrom: [t('Die, France', 'Die, France'), 'on-site', t('Charm el-Cheikh, Égypte', 'Sharm El Sheikh, Egypt')],
+    country: t('Turquie', 'Türkiye'),
     entries: [
       {
-        company: 'Freelance',
-        role: t('(Lead) Développeur full-stack', '(Lead) Full-stack developer'),
-        from: '2021-02',
-        to: '2021-06',
-        summary: t(
-          'Plateforme de vente d’œuvres d’art pour un collectif d’artistes.',
-          'Artwork sales platform for an artists’ collective.',
-        ),
         bullets: [
           t('Parcours d’achat direct et d’offre négociable.', 'Direct purchase and negotiable-offer flows.'),
           t('Impressions déclinées en formats et supports.', 'Prints offered in several sizes and media.'),
@@ -450,18 +438,46 @@ export const CAREER: readonly CareerStop[] = [
             'Multi-currency payments, refunds, instalments.',
           ),
         ],
+        company: 'Freelance',
+        from: '2021-02',
+        role: t('(Lead) Développeur full-stack', '(Lead) Full-stack developer'),
+        summary: t(
+          'Plateforme de vente d’œuvres d’art pour un collectif d’artistes.',
+          'Artwork sales platform for an artists’ collective.',
+        ),
+        to: '2021-06',
       },
     ],
+    kind: 'job',
+    motifs: ['frame'],
+    place: t('Istanbul', 'Istanbul'),
+    remoteFrom: [t('Die, France', 'Die, France'), 'on-site', t('Charm el-Cheikh, Égypte', 'Sharm El Sheikh, Egypt')],
   },
   {
-    kind: 'training',
-    place: t('En ligne', 'Online'),
-    label: t('Formation', 'Training'),
-    motifs: ['mortarboard'],
     caption: t(
       'Un cran plus haut : je me forme à l’architecture logicielle.',
       'A step up: I train in software architecture.',
     ),
+    entries: [
+      {
+        company: 'OpenClassrooms',
+        from: '2021-06',
+        remote: true,
+        role: t(
+          'Expert en développement logiciel, architecture logicielle',
+          'Software development expert, software architecture',
+        ),
+        summary: t(
+          'Titre de niveau 7 (Bac+5) : analyse et conception d’architectures logicielles, validation de solutions, coordination d’équipe, relation client et parties prenantes.',
+          'Level 7 title (master’s level): software architecture analysis and design, solution validation, team coordination, client and stakeholder relations.',
+        ),
+        to: '2022-06',
+      },
+    ],
+    kind: 'training',
+    label: t('Formation', 'Training'),
+    motifs: ['mortarboard'],
+    place: t('En ligne', 'Online'),
     remoteFrom: [
       t('Le Caire, Égypte', 'Cairo, Egypt'),
       t('Nantes, France', 'Nantes, France'),
@@ -469,42 +485,15 @@ export const CAREER: readonly CareerStop[] = [
       t('Bogota, Colombie', 'Bogotá, Colombia'),
       t('Lima, Pérou', 'Lima, Peru'),
     ],
-    entries: [
-      {
-        company: 'OpenClassrooms',
-        role: t(
-          'Expert en développement logiciel, architecture logicielle',
-          'Software development expert, software architecture',
-        ),
-        from: '2021-06',
-        to: '2022-06',
-        remote: true,
-        summary: t(
-          'Titre de niveau 7 (Bac+5) : analyse et conception d’architectures logicielles, validation de solutions, coordination d’équipe, relation client et parties prenantes.',
-          'Level 7 title (master’s level): software architecture analysis and design, solution validation, team coordination, client and stakeholder relations.',
-        ),
-      },
-    ],
   },
   {
-    kind: 'job',
-    place: t('Lima', 'Lima'),
-    country: t('Pérou', 'Peru'),
-    motifs: ['blueprint'],
     caption: t(
       'À Lima, je dessine l’architecture avant qu’on écrive la première ligne.',
       'In Lima, I draw the architecture before the first line is written.',
     ),
+    country: t('Pérou', 'Peru'),
     entries: [
       {
-        company: 'Freelance',
-        role: t('Architecte logiciel', 'Software architect'),
-        from: '2022-05',
-        to: '2022-07',
-        summary: t(
-          'Cadrage technique d’un MVP pour une société d’assurance.',
-          'Technical scoping of an MVP for an insurance company.',
-        ),
         bullets: [
           t(
             'Architecture cible documentée, pensée performance et évolutivité.',
@@ -516,28 +505,28 @@ export const CAREER: readonly CareerStop[] = [
           ),
           t('Estimation des charges, planning et budget complet.', 'Effort estimates, schedule and full budget.'),
         ],
+        company: 'Freelance',
+        from: '2022-05',
+        role: t('Architecte logiciel', 'Software architect'),
+        summary: t(
+          'Cadrage technique d’un MVP pour une société d’assurance.',
+          'Technical scoping of an MVP for an insurance company.',
+        ),
+        to: '2022-07',
       },
     ],
+    kind: 'job',
+    motifs: ['blueprint'],
+    place: t('Lima', 'Lima'),
   },
   {
-    kind: 'job',
-    place: t('Lyon', 'Lyon'),
-    country: FRANCE,
-    motifs: ['phone'],
     caption: t(
       'Retour à Lyon, là où tout a commencé. Développeur sénior, cette fois.',
       'Back in Lyon, where it all began. A senior developer this time.',
     ),
+    country: FRANCE,
     entries: [
       {
-        company: 'Rubrash · Working in Lyon',
-        role: t('Développeur full-stack sénior', 'Senior full-stack developer'),
-        from: '2022-08',
-        to: '2023-03',
-        summary: t(
-          'Deux produits : une plateforme de contenus pour une société de gestion de patrimoine et une application logistique pour la grande distribution.',
-          'Two products: a content platform for a wealth management firm and a logistics app for large retailers.',
-        ),
         bullets: [
           t(
             'Web app SSR, back-office de contenus et majeure partie de l’app mobile.',
@@ -553,74 +542,73 @@ export const CAREER: readonly CareerStop[] = [
           ),
           t('Reprise de la coordination projet avec le client.', 'Took over project coordination with the client.'),
         ],
+        company: 'Rubrash · Working in Lyon',
+        from: '2022-08',
+        role: t('Développeur full-stack sénior', 'Senior full-stack developer'),
+        summary: t(
+          'Deux produits : une plateforme de contenus pour une société de gestion de patrimoine et une application logistique pour la grande distribution.',
+          'Two products: a content platform for a wealth management firm and a logistics app for large retailers.',
+        ),
+        to: '2023-03',
       },
     ],
+    kind: 'job',
+    motifs: ['phone'],
+    place: t('Lyon', 'Lyon'),
   },
   {
-    kind: 'job',
-    place: t('Nantes', 'Nantes'),
-    country: FRANCE,
-    label: t('Transmission', 'Teaching'),
-    motifs: ['apprentices'],
     caption: t(
       'À mon tour de transmettre. Mes apprenants tracent leur propre ligne.',
       'My turn to pass it on. My learners draw lines of their own.',
     ),
+    country: FRANCE,
     entries: [
       {
         company: 'OpenClassrooms',
-        role: t('Mentor et évaluateur', 'Mentor and assessor'),
         from: '2023-03',
-        to: null,
         remote: true,
+        role: t('Mentor et évaluateur', 'Mentor and assessor'),
         summary: t(
           'Mentorat hebdomadaire et évaluation des parcours développement et intégration web. Une dizaine d’apprenants menés jusqu’au titre.',
           'Weekly mentoring and assessment on the web development and integration tracks. About ten learners taken through to their diploma.',
         ),
+        to: null,
       },
       {
         company: 'École O’clock',
-        role: t('Formateur · Tuteur pédagogique', 'Trainer · Academic tutor'),
         from: '2023-03',
-        to: '2025-02',
         remote: true,
+        role: t('Formateur · Tuteur pédagogique', 'Trainer · Academic tutor'),
         summary: t(
           'Modules back, front, mobile, GraphQL, microservices, sécurité, conteneurisation, CI/CD et Docker avancé.',
           'Modules on back end, front end, mobile, GraphQL, microservices, security, containers, CI/CD and advanced Docker.',
         ),
+        to: '2025-02',
       },
       {
         company: 'EPSI',
-        role: t('Formateur · Tuteur · Jury', 'Trainer · Tutor · Examiner'),
         from: '2025-01',
-        to: '2025-07',
+        role: t('Formateur · Tuteur · Jury', 'Trainer · Tutor · Examiner'),
         summary: t(
           'Module CI/CD, tutorat de mémoires et jurys du titre Expert en informatique et SI (RNCP).',
           'CI/CD module, thesis tutoring and juries for the IT and Information Systems Expert title (RNCP).',
         ),
+        to: '2025-07',
       },
     ],
+    kind: 'job',
+    label: t('Transmission', 'Teaching'),
+    motifs: ['apprentices'],
+    place: t('Nantes', 'Nantes'),
   },
   {
-    kind: 'job',
-    place: t('Nantes', 'Nantes'),
-    country: FRANCE,
-    label: t('Paiement', 'Payments'),
-    motifs: ['card'],
     caption: t(
       'Le paiement, là où chaque erreur se compte en euros.',
       'Payments, where every bug is counted in euros.',
     ),
+    country: FRANCE,
     entries: [
       {
-        company: 'HiPay',
-        role: t('Ingénieur logiciel sénior', 'Senior software engineer'),
-        from: '2025-03',
-        to: null,
-        summary: t(
-          'APIs et application mobile dans le paiement, dont une solution SoftPOS d’encaissement sur terminaux mobiles.',
-          'Payment APIs and a mobile app, including a SoftPOS solution for taking payments on mobile devices.',
-        ),
         bullets: [
           t(
             'Architecture logicielle selon la clean architecture.',
@@ -641,33 +629,29 @@ export const CAREER: readonly CareerStop[] = [
             'Brought AI into internal practices and tools.',
           ),
         ],
+        company: 'HiPay',
+        from: '2025-03',
+        role: t('Ingénieur logiciel sénior', 'Senior software engineer'),
+        summary: t(
+          'APIs et application mobile dans le paiement, dont une solution SoftPOS d’encaissement sur terminaux mobiles.',
+          'Payment APIs and a mobile app, including a SoftPOS solution for taking payments on mobile devices.',
+        ),
+        to: null,
       },
     ],
+    kind: 'job',
+    label: t('Paiement', 'Payments'),
+    motifs: ['card'],
+    place: t('Nantes', 'Nantes'),
   },
   {
-    kind: 'job',
-    place: t('Paris', 'Paris'),
-    country: FRANCE,
-    label: t('Freelance', 'Freelance'),
-    motifs: ['cloud'],
     caption: t(
       'Aujourd’hui, de l’architecture à la production, tout le back-end entre mes mains.',
       'Today, from architecture to production, the whole back end in my hands.',
     ),
-    remoteFrom: [t('Saint-Herblain, France', 'Saint-Herblain, France')],
+    country: FRANCE,
     entries: [
       {
-        company: 'Freelance',
-        role: t(
-          '(Lead) Architecte logiciel et développeur back-end',
-          '(Lead) Software architect and back-end developer',
-        ),
-        from: '2026-01',
-        to: '2026-06',
-        summary: t(
-          'Tout le back-end d’une plateforme communautaire reliant artistes et clients, jusqu’à la production.',
-          'The entire back end of a community platform connecting artists and clients, through to production.',
-        ),
         bullets: [
           t(
             'API Elysia + TypeScript sur Cloudflare Workers, client typé Eden Treaty.',
@@ -687,7 +671,23 @@ export const CAREER: readonly CareerStop[] = [
           ),
           t('En production pour 5 €/mois d’infrastructure.', 'In production for €5 a month in infrastructure.'),
         ],
+        company: 'Freelance',
+        from: '2026-01',
+        role: t(
+          '(Lead) Architecte logiciel et développeur back-end',
+          '(Lead) Software architect and back-end developer',
+        ),
+        summary: t(
+          'Tout le back-end d’une plateforme communautaire reliant artistes et clients, jusqu’à la production.',
+          'The entire back end of a community platform connecting artists and clients, through to production.',
+        ),
+        to: '2026-06',
       },
     ],
+    kind: 'job',
+    label: t('Freelance', 'Freelance'),
+    motifs: ['cloud'],
+    place: t('Paris', 'Paris'),
+    remoteFrom: [t('Saint-Herblain, France', 'Saint-Herblain, France')],
   },
 ];

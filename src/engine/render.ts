@@ -29,9 +29,9 @@ export function tip(th: Thread, t: number): Tip | null {
   const p = th.pts[e] as InkPoint;
   const q = th.pts[e + 1];
   // At the end, or waiting to resume somewhere else: the pen rests.
-  if (!q || (q.up && q.t - p.t > 0.5)) return { x: p.x, y: p.y, w: p.w, a: p.a, e, done: t - p.t, up: p.up };
+  if (!q || (q.up && q.t - p.t > 0.5)) return { a: p.a, done: t - p.t, e, up: p.up, w: p.w, x: p.x, y: p.y };
   const f = clamp((t - p.t) / (q.t - p.t || 1), 0, 1);
-  return { x: lerp(p.x, q.x, f), y: lerp(p.y, q.y, f), w: p.w, a: p.a, e, done: 0, up: q.up };
+  return { a: p.a, done: 0, e, up: q.up, w: p.w, x: lerp(p.x, q.x, f), y: lerp(p.y, q.y, f) };
 }
 
 /** Draws a story onto a canvas at a given moment, from a given camera. */
