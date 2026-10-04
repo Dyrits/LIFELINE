@@ -60,3 +60,23 @@ Scope: Career drawing
 Summary: The line reaches Merredin by flying Dylan's route (Geneva, Moscow, Bangkok, Kuala Lumpur, Singapore, Jakarta, Perth) over a map printed on the page, a dot and a name at each place, the pen tip a plane. Replaces the globe.
 References: `route` in `src/data/career.ts`, `flight()` in `src/career/motifs.ts`, `Print` / `Label` / `Plane` in `src/engine/story.ts`, `src/career/world.ts` (Natural Earth 110m land, public domain).
 Validation: `npm run check` (54 tests), `npm run e2e` (7 tests); accepted by Dylan ("The map looks awesome"), 2026-10-04.
+
+## CHG-0007 · 2026-10-04 · Code conventions written into the guidelines
+
+Type: Documentation
+Event: Agreement
+Scope: Project documents
+
+Summary: `GUIDELINES.md` gains code conventions from a topic-by-topic interview: naming (whole words, nesting by shared word, PascalCase options), size, types, control flow, side effects, errors, comments, tests and dependencies. Existing code that predates them is not yet brought in line.
+References: `GUIDELINES.md`.
+Validation: Each rule confirmed by Dylan during the interview, 2026-10-04.
+
+## CHG-0008 · 2026-10-04 · Biome sorts keys, properties and attributes; explicit any is an error
+
+Type: Configuration
+Event: Agreement
+Scope: Tooling
+
+Summary: `noExplicitAny` is raised from a warning to an error, and every applicable Biome sorting action is on (imports, object keys, CSS properties, HTML attributes, type fields, interface and enum members, `package.json`). The existing code is not yet sorted, so `npm run check` fails until `biome check --write` is applied.
+References: `biome.json`.
+Validation: Requested by Dylan ("Avoid as any"; "most of the sorting options it has should be on"), 2026-10-04.
