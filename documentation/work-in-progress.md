@@ -217,18 +217,18 @@ Requested 2026-10-04:
   the passport, then chose the compass over a map, a globe or the plain line, wanting illustrations other than maps):
   the line draws the dial resting on the line, the detail pen its ticks, a needle pointing north-west (red spot on
   its north half) and a dashed sweep from south round towards it. Its points are written N, E, S, O in French and
-  N, E, S, W in English. Shapes can now carry `words`, written as labels once the details are drawn. The chapter
+  N, E, S, W in English. The pen flies as the plane while it is off the line, round the dial (Dylan's idea). Shapes can now carry `words`, written as labels once the details are drawn. The chapter
   line now reads "Vers l’Asie, sac au dos." (Dylan's wording) / "Off to Asia, backpack on."
 
-Evidence: `npm run check` (110 tests; new: the compass on the way to Ubud writes its points in each language), `npm run e2e`
+Evidence: `npm run check` (111 tests; new: the compass on the way to Ubud writes its points in each language, and the pen flies round its dial as a plane), `npm run e2e`
 (15 tests; new: the RGIS card folds into its own tag, which reopens only it, and that tag stays up by the
 barcode's top; each red before its change).
-Screenshots: the first stop folded, the overview, the compass mid-drawing and drawn (letters readable, dashes
-apart). The needle's red spot barely shows over the blue wash.
+Screenshots: the first stop folded, the overview, the compass mid-drawing (the plane round the dial) and drawn
+(letters readable, dashes apart). The needle's red spot barely shows over the blue wash.
 
 ## Notes
 
 - Foldkit skill folders the user added to the workspace are not part of this app and are not committed.
-- Handoffs in `.agents/handoffs/` are committed; latest: `.agents/handoffs/2026-10-04-1446-code-cleanup-delivered.md`; saved scripts: `.agents/scripts/INDEX.md`.
+- Handoffs in `.agents/handoffs/` are committed; latest: `.agents/handoffs/2026-10-04-2009-overview-tags-and-compass.md`; saved scripts: `.agents/scripts/INDEX.md`.
 - Deferred and offered work moved to `documentation/backlog.md` (2026-10-04).
 - Next step: Dylan's review of the flight and the weed, then of batches 2 to 5 and the card restyle.

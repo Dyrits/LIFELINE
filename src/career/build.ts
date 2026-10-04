@@ -215,6 +215,11 @@ function connect(build: Build, stop: CareerStop, previous: CareerStop, gap: numb
     story.time += story.add(THREAD.Ink, progress => [110 * progress, 0], { speed: 180 });
     const [x, y] = [ink.x, ink.y];
     const duration = story.add(THREAD.Ink, strokes([way.outline]), { speed: 210 });
+    // The pen flies as a plane while it is off the line, round the emblem.
+    const aloft = ink.points.filter(point => point.time >= story.time && point.y < y - 3);
+    const [takeOff, landing] = [aloft[0]?.time, aloft.at(-1)?.time];
+    if (takeOff !== undefined && landing !== undefined)
+      story.planes.add({ end: landing, pen: THREAD.Ink, start: takeOff });
     ride(build, exit(way), () => 0, duration);
     emblem = Math.max(duration, details(story, THREAD.InkDetail, way.details, x, y, duration));
     washes(story, way, x, y, emblem);

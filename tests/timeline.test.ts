@@ -115,6 +115,15 @@ describe('career timeline', () => {
     expect(written.map(label => label.text.en).sort()).toEqual(['E', 'N', 'S', 'W']);
   });
 
+  it('flies the pen as a plane round the compass dial', () => {
+    const asia = CAREER.findIndex(stop => stop.way === 'Compass');
+    const [arrival, last] = [timeline.stops[asia]?.start.time ?? 0, timeline.stops[asia - 1]?.end.time ?? 0];
+    const flights = timeline.story.planes.items.filter(
+      plane => plane.pen === THREAD.Ink && plane.start > last && plane.end < arrival,
+    );
+    expect(flights).toHaveLength(1);
+  });
+
   it('lasts a few minutes', () => {
     expect(timeline.end).toBeGreaterThan(120);
     expect(timeline.end).toBeLessThan(600);
