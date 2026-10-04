@@ -35,6 +35,30 @@ export type Blot = Readonly<{
   seed: number;
 }>;
 export type Caption = Readonly<{ t: number; text: Text; dur: number }>;
+export type Ring = readonly (readonly [x: number, y: number])[];
+/**
+ * A map printed under the ink, fading in from t: land rings washed with `land` and outlined, the sea between them
+ * washed with `sea`, all fading out towards the edge of a circle of radius r around (x, y).
+ */
+export type Print = Readonly<{
+  rings: readonly Ring[];
+  x: number;
+  y: number;
+  r: number;
+  t: number;
+  land: Pigment;
+  sea: Pigment;
+}>;
+/** A name written beside (x, y) from t, on the given side, or centred on it. */
+export type Label = Readonly<{
+  x: number;
+  y: number;
+  text: Text;
+  t: number;
+  side: 'left' | 'right' | 'above' | 'below' | 'centre';
+}>;
+/** From t0 to t1, the tip of thread `pen` is a plane. */
+export type Plane = Readonly<{ pen: string; t0: number; t1: number }>;
 export type Bounds = { x0: number; y0: number; x1: number; y1: number };
 
 export type AddOptions = {
@@ -53,6 +77,8 @@ export type AddOptions = {
 const TRAVEL_WEIGHT = 0.3;
 const SAMPLES = 900;
 const POINTS_PER_SECOND = 72;
+/** Longest stretch of stroke between two laid points. */
+const MAX_STEP = 4;
 
 /**
  * A story is built ahead of time as timed ink: every point of every thread knows when it is laid down.
@@ -64,6 +90,9 @@ export class Story {
   readonly cues: Cue[] = [];
   readonly blots: Blot[] = [];
   readonly captions: Caption[] = [];
+  readonly prints: Print[] = [];
+  readonly labels: Label[] = [];
+  readonly planes: Plane[] = [];
   readonly zooms: [t: number, zoom: number][];
   private blotSeed = 7;
 
@@ -102,7 +131,8 @@ export class Story {
     const len = cum[SAMPLES] ?? 0;
     const dur = o.dur ?? Math.max(0.2, len / (o.speed ?? 180));
     const t0 = o.t0 ?? this.T;
-    const n = Math.max(2, Math.ceil(dur * POINTS_PER_SECOND));
+    // Enough points for the time it takes, and for its length: a fast pen must not cut corners off small details.
+    const n = Math.max(2, Math.ceil(dur * POINTS_PER_SECOND), Math.ceil(len / MAX_STEP));
     // A thread that resumes elsewhere lifts the pen rather than inking the jump.
     const last = th.pts[th.pts.length - 1];
     const first = dense[0] as PathPoint;
@@ -167,6 +197,18 @@ export class Story {
 
   caption(text: Text, t = this.T, dur = 6.5): void {
     this.captions.push({ t, text, dur });
+  }
+
+  print(p: Print): void {
+    this.prints.push(p);
+  }
+
+  label(l: Label): void {
+    this.labels.push(l);
+  }
+
+  plane(p: Plane): void {
+    this.planes.push(p);
   }
 
   zoom(z: number, t = this.T): void {

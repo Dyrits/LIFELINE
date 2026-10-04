@@ -136,17 +136,44 @@ Evidence: `npm run check` (54 tests), `npm run e2e` (7 tests); screenshots of fo
 
 - Accenture caption: "des millions de comptes clients … une petite équipe" (no exact number). The card's
   bullet still says "30 millions" (WAYPOINTS text); offered, not changed.
-- Flight to Australia: a stop with `flight: true` (Merredin) is reached by the line taking off,
-  circling a globe 1.5 times (globe by the detail pen, blue wash) and landing; `flight()` in
-  `src/career/motifs.ts`. Reusable for Asia or the return, not applied there yet.
-  Evidence: `npm run check` (54 tests); screenshots at four moments of the flight.
+- Flight to Australia over a world map: accepted, CHG-0006.
+- Skeleton weed redrawn in detail: four lobed rosette leaves with midribs (rounded corners), bristles at the foot
+  of the stem, branches with narrow leaves, four yellow flower heads (broad petals, `spots` washes in `sun`), two
+  buds and a seed head. Strokes now lay a point at least every 4 units (`MAX_STEP` in `src/engine/story.ts`):
+  fast detail pens were cutting small details into spikes, the cause of the earlier "squiggle" flower heads.
+- Evidence: `npm run check` (54 tests), `npm run e2e` (7 tests); screenshots of the flight at eight moments, the
+  weed close up, and every stop's end plus the overview (no change seen on other shapes).
+- Bar kitchen (`pan` in `src/career/motifs.ts`) redrawn: the line draws a cocktail glass and a stove top; the
+  detail pen adds an olive, knobs, flames (orange wash), a pan tossing food and two curls of steam.
+- Lamb marking at Dubbo (`pickets` in `src/career/motifs.ts`, key unchanged) redrawn as a farm, at Dylan's request
+  ("could look more like a farm overall"): the line draws a barn and a windmill tower; the detail pen adds the
+  barn's braced door and hayloft, a fence, the windmill's braces, wheel and tail vane, and a ewe with her lamb.
+- Ambulance dispatch (Kuala Lumpur, stop 8): the winding route to a cross is replaced by an ambulance, motif key
+  `routeCross` renamed `ambulance`. The line draws the box, cab and bonnet; the detail pen adds the road under the
+  wheels, wheel arches, wheels, a red cross, a stripe, the cab window and door, a headlight and a flashing light bar.
+- Asia chapter: the stretch before Ubud draws a backpack (Dylan's choice among a backpack, a map Australia → Bali,
+  and a preview map of the Asia stops): `way: 'backpack'` on the Ubud stop draws a shape on the connector while the
+  chapter line is told, after a short lead-in; the connector shortens so the chapter still gets 4.5 s. Backpack:
+  rolled sleeping mat on top, flap, two straps down the front, a squared front pocket, a bottle in the side pocket.
+  Shape washes factored into `washes()` in `src/career/build.ts`.
+- Ubud (stop 5) now draws two shapes: a candi bentar (Balinese split gate, `candiBentar`) whose halves the line
+  climbs, walking through the gap between them, then the carpenter's gallery with a piece of furniture in each
+  frame (chair, table, cabinet, stool, arched door, bookshelf).
+- Working from several places: the travel loops are replaced by map pins (Dylan's choice among pins, passport
+  stamps and luggage tags): the line rises into a pin per place in `remoteFrom` and comes back down, a red dot of
+  wash and the town written above (the part before the comma of the place). Training stops draw their pins before
+  the mortarboard too, instead of loops under it (`pins()` in `src/career/build.ts`, `PIN_GAP` 118 units per pin).
+- Short trips: a stop with `signpost: true` (Dubbo) is reached past a signpost on the connector, the last stop's
+  place on a board pointing back, this one's on a board pointing ahead (`signpost()` in `src/career/build.ts`);
+  the connector lasts at least 3 s so both can be read. Proposed to Dylan, awaiting his answer: maps for changes
+  of continent only (Asia: Dubbo → Ubud; France: Malacca → Bouguenais; routes needed from him), signposts for
+  moves within a country, the plain line for remote work.
+- Not mine, found staged in git: the Merredin chapter / caption rewording in `src/data/career.ts`; its French
+  "J’atteris en l’Australie" should read "J’atterris en Australie" (flagged to Dylan, not changed).
 
 ## Notes
 
 - Foldkit skill folders the user added to the workspace are not part of this app and are not committed.
 - Handoffs in `.agents/handoffs/` are committed; latest: `.agents/handoffs/2026-10-04-0135-feedback-batches-and-workspace-setup.md`; saved scripts: `.agents/scripts/INDEX.md`.
 - Deferred and offered work moved to `documentation/backlog.md` (2026-10-04).
-- In progress: the skeleton weed (`skeletonWeed` in `src/career/motifs.ts`) replaced the furrows at
-  the user's request; first version in place, but its flower heads read as squiggles and its leaves
-  as a flat boat. A second pass (bigger heads, rosette leaves angled up) was interrupted, not applied.
-- Next step: finish the skeleton weed, then user review of batches 2 to 5 and the card restyle.
+- Next step: Dylan's review of the flight and the weed, then of batches 2 to 5 and the card restyle.

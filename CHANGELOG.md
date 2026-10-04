@@ -50,3 +50,13 @@ Scope: Project documents
 Summary: `GUIDELINES.md` keeps only the portable rule "no user-facing string literals in rendering code". The unbroken line, the French and English pair, French typography and the caption voice move to `documentation/requirements.md`; building stories ahead without the DOM becomes ADR 0001; screenshot verification and confirming caption facts move to `AGENTS.md`. CHG-0002's pointer to `GUIDELINES.md` (Content) now resolves to `documentation/requirements.md` (Content).
 References: `GUIDELINES.md`, `documentation/requirements.md`, `documentation/architecture-decision-record/0001-stories-built-ahead-without-the-dom.md`, `AGENTS.md`.
 Validation: Audit of `GUIDELINES.md` shared by Dylan, 2026-10-04.
+
+## CHG-0006 · 2026-10-04 · Flight to Australia over a world map
+
+Type: Code
+Event: Delivery
+Scope: Career drawing
+
+Summary: The line reaches Merredin by flying Dylan's route (Geneva, Moscow, Bangkok, Kuala Lumpur, Singapore, Jakarta, Perth) over a map printed on the page, a dot and a name at each place, the pen tip a plane. Replaces the globe.
+References: `route` in `src/data/career.ts`, `flight()` in `src/career/motifs.ts`, `Print` / `Label` / `Plane` in `src/engine/story.ts`, `src/career/world.ts` (Natural Earth 110m land, public domain).
+Validation: `npm run check` (54 tests), `npm run e2e` (7 tests); accepted by Dylan ("The map looks awesome"), 2026-10-04.

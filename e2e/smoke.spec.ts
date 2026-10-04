@@ -57,7 +57,8 @@ test('the language choice is remembered', async ({ page }) => {
 
 test('the final view shows every stop and reopens a card on click', async ({ page }) => {
   const errors = watchErrors(page);
-  await page.goto('/?path=career&lang=en&t=300');
+  // Well past the end, which moves as the drawing grows.
+  await page.goto('/?path=career&lang=en&t=400');
   await expect(page.locator('.card.shown')).toHaveCount(21, { timeout: 8000 });
   await expect(page.locator('.card.open')).toHaveCount(0);
   await page.locator('.card[data-stop="18"] .tag').click();

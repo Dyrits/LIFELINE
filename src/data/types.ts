@@ -15,10 +15,12 @@ export type MotifKey =
   | 'skeletonWeed'
   | 'pan'
   | 'pickets'
+  | 'candiBentar'
   | 'browserGallery'
   | 'browserCode'
   | 'browserCalendar'
-  | 'routeCross'
+  | 'ambulance'
+  | 'backpack'
   | 'bars'
   | 'plane'
   | 'bubble'
@@ -59,12 +61,23 @@ export type CareerStop = Readonly<{
   caption: Text;
   /** Opens a chapter of the story: told on the stretch of line leading to this stop. */
   chapter?: Text;
-  /** The stretch of line leading to this stop flies around a globe: the stop is far away. */
-  flight?: boolean;
+  /** The stretch of line leading to this stop flies over a map, through these places: the stop is far away. */
+  route?: readonly Place[];
+  /** A shape drawn on the stretch of line leading to this stop, while its chapter is told. */
+  way?: Exclude<MotifKey, 'apprentices'>;
+  /** A short trip: the stretch of line leading to this stop passes a signpost, the last place to the left, this one to the right. */
+  signpost?: boolean;
   /** Each entry gets its own card: the first below the line, the others beside the shape with the same index. */
   split?: boolean;
   remoteFrom?: readonly RemotePlace[];
   entries: readonly [Entry, ...Entry[]];
+}>;
+
+/** A place on a route, at [longitude, latitude], its name written on the given side of it. */
+export type Place = Readonly<{
+  name: Text;
+  at: readonly [lon: number, lat: number];
+  side: 'left' | 'right' | 'above' | 'below';
 }>;
 
 export type Profile = Readonly<{

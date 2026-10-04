@@ -1,6 +1,7 @@
+import type { Lang } from '../data/types';
 import { clamp, eout, lerp, TAU } from './math';
-import { paperGrain, vignette, watercolour } from './paper';
-import type { Blot, InkPoint, Story, Thread } from './story';
+import { PIGMENTS, paperGrain, vignette, watercolour } from './paper';
+import type { Blot, InkPoint, Label, Plane, Print, Story, Thread } from './story';
 
 export type Camera = { x: number; y: number; z: number };
 
@@ -38,6 +39,8 @@ export class Renderer {
   W = 0;
   H = 0;
   S = 1;
+  /** Language of the names written on the drawing. */
+  lang: Lang = 'fr';
   private readonly ctx: CanvasRenderingContext2D;
   private grain: CanvasPattern | null = null;
   private vign: HTMLCanvasElement | null = null;
@@ -86,12 +89,20 @@ export class Renderer {
       ctx.restore();
     }
     this.drawBlots(story.blots, cam, now);
+    for (const p of story.prints) this.drawPrint(p, cam, now);
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     for (const name of order) {
       const th = story.threads.get(name);
-      if (th) this.drawThread(th, cam, now);
+      if (th)
+        this.drawThread(
+          th,
+          cam,
+          now,
+          story.planes.find(p => p.pen === name && now > p.t0 && now < p.t1),
+        );
     }
+    for (const l of story.labels) this.drawLabel(l, cam, now);
     if (this.vign) ctx.drawImage(this.vign, 0, 0, W, H);
   }
 
@@ -117,7 +128,65 @@ export class Renderer {
     ctx.globalCompositeOperation = 'source-over';
   }
 
-  private drawThread(th: Thread, cam: Camera, now: number): void {
+  /** A printed map: land washed and outlined, fading in, and fading out towards its edge so it has no border. */
+  private drawPrint(p: Print, cam: Camera, now: number): void {
+    const { ctx, S, W, H } = this;
+    if (now <= p.t) return;
+    const [x, y] = this.toScreen(cam, p.x, p.y);
+    const r = p.r * S;
+    if (x + r < 0 || x - r > W || y + r < 0 || y - r > H) return;
+    const k = eout(clamp((now - p.t) / 1.6, 0, 1));
+    const fade = (rgb: readonly number[], a: number) => {
+      const g = ctx.createRadialGradient(x, y, r * 0.45, x, y, r);
+      g.addColorStop(0, `rgba(${rgb.join(',')},${a})`);
+      g.addColorStop(1, `rgba(${rgb.join(',')},0)`);
+      return g;
+    };
+    const land = new Path2D();
+    for (const ring of p.rings) {
+      ring.forEach(([px, py], i) => {
+        const sx = (px - cam.x) * S + W / 2;
+        const sy = (py - cam.y) * S + H / 2;
+        if (i) land.lineTo(sx, sy);
+        else land.moveTo(sx, sy);
+      });
+      land.closePath();
+    }
+    // The sea: the square around the circle with the land left out, faded to nothing at the circle's edge.
+    const sea = new Path2D(land);
+    sea.rect(x - r, y - r, 2 * r, 2 * r);
+    ctx.globalAlpha = k;
+    ctx.globalCompositeOperation = 'multiply';
+    ctx.fillStyle = fade(PIGMENTS[p.sea], 0.24);
+    ctx.fill(sea, 'evenodd');
+    ctx.fillStyle = fade(PIGMENTS[p.land], 0.42);
+    ctx.fill(land);
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.strokeStyle = fade([58, 66, 84], 0.55);
+    ctx.lineWidth = Math.max(0.6, 0.9 * S);
+    ctx.lineJoin = 'round';
+    ctx.stroke(land);
+    ctx.globalAlpha = 1;
+  }
+
+  /** A name written in small italics beside its place, appearing when the line reaches it. */
+  private drawLabel(l: Label, cam: Camera, now: number): void {
+    const { ctx, S } = this;
+    if (now <= l.t) return;
+    const [x, y] = this.toScreen(cam, l.x, l.y);
+    const gap = l.side === 'centre' ? 0 : 8 * S;
+    ctx.globalAlpha = 0.8 * eout(clamp((now - l.t) / 0.6, 0, 1));
+    ctx.fillStyle = '#1d1b26';
+    ctx.font = `italic ${Math.max(10, 15 * S)}px "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif`;
+    ctx.textAlign = l.side === 'left' ? 'right' : l.side === 'right' ? 'left' : 'center';
+    ctx.textBaseline = l.side === 'above' ? 'bottom' : l.side === 'below' ? 'top' : 'middle';
+    const dx = l.side === 'left' ? -gap : l.side === 'right' ? gap : 0;
+    const dy = l.side === 'above' ? -gap : l.side === 'below' ? gap : 0;
+    ctx.fillText(l.text[this.lang], x + dx, y + dy);
+    ctx.globalAlpha = 1;
+  }
+
+  private drawThread(th: Thread, cam: Camera, now: number, plane?: Plane): void {
     const { ctx, W, H, S } = this;
     const P = th.pts;
     const tp = tip(th, now);
@@ -156,8 +225,13 @@ export class Renderer {
       }
       if (i >= end) break;
     }
-    // The nib: a wet bead of ink at the tip while the thread is still being drawn.
-    if (tp.done < 0.6 && !tp.up) {
+    if (plane) {
+      // In flight, the tip is a plane heading the way the pen goes.
+      const back = tip(th, now - 0.05) ?? tp;
+      const fade = Math.min(1, (now - plane.t0) / 0.3, (plane.t1 - now) / 0.3);
+      this.drawPlane(X(tp.x), Y(tp.y), Math.atan2(tp.y - back.y, tp.x - back.x), fade);
+    } else if (tp.done < 0.6 && !tp.up) {
+      // The nib: a wet bead of ink at the tip while the thread is still being drawn.
       const k = 1 - tp.done / 0.6;
       const x = X(tp.x);
       const y = Y(tp.y);
@@ -173,5 +247,43 @@ export class Renderer {
       ctx.fill();
     }
     ctx.globalAlpha = 1;
+  }
+
+  /** A small plane seen from above, nose towards `heading`, in the colour already set. */
+  private drawPlane(x: number, y: number, heading: number, alpha: number): void {
+    const { ctx } = this;
+    const k = Math.max(0.6, this.S);
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(heading);
+    ctx.scale(k, k);
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = ctx.strokeStyle;
+    const half: (readonly [number, number])[] = [
+      [15, 0],
+      [12, -2],
+      [3, -2.2],
+      [-4, -14],
+      [-8, -14],
+      [-4, -2.2],
+      [-11, -2],
+      [-15, -7],
+      [-17.5, -7],
+      [-15, 0],
+    ];
+    ctx.beginPath();
+    [
+      ...half,
+      ...half
+        .slice(0, -1)
+        .reverse()
+        .map(([px, py]) => [px, -py] as const),
+    ].forEach(([px, py], i) => {
+      if (i) ctx.lineTo(px, py);
+      else ctx.moveTo(px, py);
+    });
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
   }
 }

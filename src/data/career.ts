@@ -85,12 +85,21 @@ export const CAREER: readonly CareerStop[] = [
     place: t('Merredin', 'Merredin'),
     country: AUSTRALIA,
     motifs: ['skeletonWeed'],
-    flight: true,
-    chapter: t('L’Australie, un visa vacances-travail en poche.', 'Australia, a working holiday visa in my pocket.'),
-    caption: t(
-      'Trois ans plus tard, je pose le clavier pour voyager. Dans des champs sans fin, je traque les mauvaises herbes.',
-      'Three years in, I put the keyboard down to travel. In endless fields, I hunt weeds.',
+    // The way Dylan went to Australia, its main stops (Dylan, 2026-10-04).
+    route: [
+      { name: t('Genève', 'Geneva'), at: [6.1, 46.2], side: 'right' },
+      { name: t('Moscou', 'Moscow'), at: [37.6, 55.8], side: 'above' },
+      { name: t('Bangkok', 'Bangkok'), at: [100.5, 13.8], side: 'right' },
+      { name: t('Kuala Lumpur', 'Kuala Lumpur'), at: [101.7, 3.1], side: 'left' },
+      { name: t('Singapour', 'Singapore'), at: [103.8, 1.3], side: 'right' },
+      { name: t('Jakarta', 'Jakarta'), at: [106.8, -6.2], side: 'left' },
+      { name: t('Perth', 'Perth'), at: [115.9, -31.9], side: 'left' },
+    ],
+    chapter: t(
+      'Trois ans plus tard, je pose le clavier pour voyager. J’atteris en l’Australie, un visa vacances-travail en poche.',
+      'Three years in, I put the keyboard down to travel. I land in Australia, a working holiday visa in my pocket.',
     ),
+    caption: t('Dans des champs sans fin, je traque les mauvaises herbes.', 'In endless fields, I hunt weeds.'),
     entries: [
       {
         company: 'CWC Professional AG Contractors',
@@ -128,6 +137,7 @@ export const CAREER: readonly CareerStop[] = [
     kind: 'job',
     place: t('Dubbo', 'Dubbo'),
     country: AUSTRALIA,
+    signpost: true,
     motifs: ['pickets'],
     caption: t(
       'Retour à la terre : du bétail et des moutons à marquer.',
@@ -148,7 +158,8 @@ export const CAREER: readonly CareerStop[] = [
     kind: 'job',
     place: t('Ubud', 'Ubud'),
     country: t('Indonésie', 'Indonesia'),
-    motifs: ['browserGallery'],
+    motifs: ['candiBentar', 'browserGallery'],
+    way: 'backpack',
     chapter: t('L’Asie, sac au dos.', 'Asia, backpack on.'),
     caption: t(
       'À Bali, je rouvre l’ordinateur. Le code peut voyager avec moi.',
@@ -241,7 +252,7 @@ export const CAREER: readonly CareerStop[] = [
     kind: 'job',
     place: t('Kuala Lumpur', 'Kuala Lumpur'),
     country: MALAYSIA,
-    motifs: ['routeCross'],
+    motifs: ['ambulance'],
     caption: t(
       'Je passe côté serveur, pour aider des ambulances à trouver le bon hôpital.',
       'I move to the back end, helping ambulances find the right hospital.',

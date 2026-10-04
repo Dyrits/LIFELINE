@@ -65,6 +65,7 @@ let capTimer = 0;
 
 function applyLang(next: Lang): void {
   lang = next;
+  renderer.lang = lang;
   document.documentElement.lang = lang;
   for (const el of document.querySelectorAll<HTMLElement>('[data-i18n]')) {
     const key = el.dataset.i18n as keyof typeof UI;
