@@ -90,3 +90,23 @@ Scope: Tooling
 Summary: `biome check --write .` applied the sorting agreed in CHG-0008 across 15 files. `useSortedKeys` is off for `package.json` only: it fought `useSortedPackageJson` over the same keys and looped forever.
 References: CHG-0008; `biome.json` (`overrides`).
 Validation: `npm run check` (tsc, Biome, 58 Vitest tests) and `npm run e2e` (7 Playwright tests) pass. Screenshots of the intro and the 21 Career stops before and after match by eye. No CSS shorthand moved after its longhand; the two swapped pairs (`#again` `border`/`border-radius`, `.card .body` `transform`/`transform-origin`) don't override each other.
+
+## CHG-0010 · 2026-10-04 · Code cleanup decisions; language codes exempt from PascalCase
+
+Type: Code
+Event: Agreement
+Scope: Code conventions
+
+Summary: For the cleanup that brings the code in line with `GUIDELINES.md`: language codes (`'fr'`, `'en'`) keep their lowercase form, an exemption now written under "Options are PascalCase". `Story`'s collections and the renderer's draw methods are nested. The unused heartbeat cue, `UI.close` and `PROFILE` are deleted. Pens are named by a typed `THREAD` map.
+References: `GUIDELINES.md` (Naming); `documentation/work-in-progress.md` (Code cleanup).
+Validation: Chosen by Dylan during the review, 2026-10-04.
+
+## CHG-0011 · 2026-10-04 · Code brought in line with the guidelines
+
+Type: Code
+Event: Delivery
+Scope: Code conventions
+
+Summary: The whole codebase was reviewed against `GUIDELINES.md` and the agreed behaviour, then refactored, as decided in CHG-0010: whole-word and nested names, PascalCase options, `buildCareer` split into its steps, new modules for flight geometry, interface strings, language, months, pigments and canvas helpers, doc comments, and one behaviour per test. Behaviour is unchanged.
+References: CHG-0010; `documentation/work-in-progress.md` (Code cleanup, with the open findings).
+Validation: The built story serialises identically before and after. `npm run check` (108 Vitest tests) and `npm run e2e` (13 Playwright tests) pass. Screenshots of every stop match by eye. Both reviewers verified the result.

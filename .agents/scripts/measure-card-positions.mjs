@@ -27,8 +27,8 @@ let stops;
 try {
   const { buildCareer } = await server.ssrLoadModule('/src/career/build.ts');
   const { CAREER } = await server.ssrLoadModule('/src/data/career.ts');
-  const { currentMonth } = await server.ssrLoadModule('/src/i18n.ts');
-  stops = buildCareer(CAREER, currentMonth()).stops.filter(m => !only || only.includes(m.index));
+  const month = await server.ssrLoadModule('/src/month.ts');
+  stops = buildCareer(CAREER, month.of(new Date())).stops.filter(m => !only || only.includes(m.index));
 } finally {
   await server.close();
 }
@@ -39,7 +39,7 @@ try {
     const page = await browser.newPage({ viewport: { width, height } });
     const out = [];
     for (const m of stops) {
-      const t = atEnd ? m.t1 - offset : m.t0 + offset;
+      const t = atEnd ? m.end.time - offset : m.start.time + offset;
       await page.goto(`${base}/?path=career&lang=${lang}&t=${t.toFixed(2)}`);
       // Pause at once, so the moment measured is the one asked for; then let the card settle.
       await page.keyboard.press('Space');

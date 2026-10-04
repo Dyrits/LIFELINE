@@ -1,47 +1,53 @@
 import './style.css';
-import { buildCareer, monthAt, type StopMark } from './career/build';
+import { buildCareer, type StopMark, THREAD } from './career/build';
 import { CardLayer, cardAnchor } from './career/cards';
 import { CAREER } from './data/career';
 import type { Lang } from './data/types';
+import { UI } from './data/ui';
 import { Audio } from './engine/audio';
 import { lerp } from './engine/math';
 import { Player } from './engine/player';
 import { Renderer } from './engine/render';
-import { currentMonth, detectLang, saveLang, UI } from './i18n';
+import * as language from './language';
+import * as month from './month';
 
-const $ = <T extends HTMLElement>(sel: string): T => {
-  const el = document.querySelector<T>(sel);
-  if (!el) throw new Error(`Missing element ${sel}`);
-  return el;
+const select = <Element extends HTMLElement>(selector: string): Element => {
+  const element = document.querySelector<Element>(selector);
+  if (!element) throw new Error(`Missing element ${selector}`);
+  return element;
 };
 
-const canvas = $<HTMLCanvasElement>('#c');
-const capEl = $('#cap');
-const progEl = $('#prog');
-const yearEl = $('#year');
-const pauseBtn = $<HTMLButtonElement>('#pause');
-const hudEl = $('#hud');
-const sndBtn = $<HTMLButtonElement>('#snd');
-const langBtn = $<HTMLButtonElement>('#lang');
-const againBtn = $<HTMLButtonElement>('#again');
-const backBtn = $<HTMLButtonElement>('#back');
-const introEl = $('#intro');
-const careerBtn = $<HTMLButtonElement>('#path-career');
+const canvas = select<HTMLCanvasElement>('#c');
+const element = {
+  caption: select('#cap'),
+  hud: select('#hud'),
+  intro: select('#intro'),
+  progress: select('#prog'),
+  year: select('#year'),
+};
+const button = {
+  again: select<HTMLButtonElement>('#again'),
+  back: select<HTMLButtonElement>('#back'),
+  career: select<HTMLButtonElement>('#path-career'),
+  lang: select<HTMLButtonElement>('#lang'),
+  pause: select<HTMLButtonElement>('#pause'),
+  sound: select<HTMLButtonElement>('#snd'),
+};
 
 const audio = new Audio();
 const renderer = new Renderer(canvas);
-const career = buildCareer(CAREER, currentMonth());
+const career = buildCareer(CAREER, month.of(new Date()));
 const marks = career.stops;
 
 /** The line's height over time: steady during a stop, climbing along the connector to the next. */
-function baseline(t: number): number {
+function baseline(time: number): number {
   const first = marks[0];
-  if (!first || t <= first.t0) return first?.y ?? 0;
-  for (let i = 0; i < marks.length; i++) {
-    const m = marks[i] as StopMark;
-    const next = marks[i + 1];
-    if (!next || t < m.t1) return m.y;
-    if (t < next.t0) return lerp(m.y, next.y, (t - m.t1) / (next.t0 - m.t1));
+  if (!first || time <= first.start.time) return first?.y ?? 0;
+  for (let index = 0; index < marks.length; index++) {
+    const mark = marks[index] as StopMark;
+    const next = marks[index + 1];
+    if (!next || time < mark.end.time) return mark.y;
+    if (time < next.start.time) return lerp(mark.y, next.y, (time - mark.end.time) / (next.start.time - mark.end.time));
   }
   return marks[marks.length - 1]?.y ?? 0;
 }
@@ -49,72 +55,83 @@ function baseline(t: number): number {
 const player = new Player(renderer, career.story, career.end, audio, {
   baseline,
   follow: [
-    ['A', 1],
-    ['C', 0.5],
+    [THREAD.Ink, 1],
+    [THREAD.Gold, 0.5],
   ],
-  lead: 'A',
-  order: ['P0', 'P1', 'P2', 'C', 'CD', 'D', 'A'],
+  lead: THREAD.Ink,
+  order: [...THREAD.Apprentices, THREAD.Gold, THREAD.GoldDetail, THREAD.InkDetail, THREAD.Ink],
 });
-const cards = new CardLayer($('#cards'), CAREER, marks);
+const cards = new CardLayer(select('#cards'), CAREER, marks);
 
-let lang: Lang = detectLang();
+let lang: Lang = language.detect();
 let started = false;
 let paused = false;
-let capIdx = -1;
-let capTimer = 0;
+
+/** The caption on screen: which one is shown, whether it is in an old language, and its pending fade-in. */
+const caption = { shown: null as number | null, stale: false, timer: 0 };
+
+/** Writes the labels of the buttons whose text follows their state. */
+const label = {
+  pause: () => {
+    button.pause.textContent = (paused ? UI.resume : UI.pause)[lang];
+  },
+  sound: () => {
+    button.sound.textContent = (audio.muted ? UI.soundOff : UI.soundOn)[lang];
+  },
+};
 
 function applyLang(next: Lang): void {
   lang = next;
   renderer.lang = lang;
   document.documentElement.lang = lang;
-  for (const el of document.querySelectorAll<HTMLElement>('[data-i18n]')) {
-    const key = el.dataset.i18n as keyof typeof UI;
-    if (UI[key]) el.textContent = UI[key][lang];
+  for (const translated of document.querySelectorAll<HTMLElement>('[data-i18n]')) {
+    const key = translated.dataset.i18n as keyof typeof UI;
+    if (UI[key]) translated.textContent = UI[key][lang];
   }
-  for (const el of langBtn.querySelectorAll<HTMLElement>('[data-lang]'))
-    el.classList.toggle('on', el.dataset.lang === lang);
-  sndBtn.textContent = (audio.muted ? UI.soundOff : UI.soundOn)[lang];
-  pauseBtn.textContent = (paused ? UI.resume : UI.pause)[lang];
+  for (const option of button.lang.querySelectorAll<HTMLElement>('[data-lang]'))
+    option.classList.toggle('on', option.dataset.lang === lang);
+  label.sound();
+  label.pause();
   cards.render(lang);
-  capIdx = -2; // Forces the caption to redraw in the new language.
+  caption.stale = true;
 }
 
 /** The caption's text on screen, not its full-width box; none while it is hidden. */
 function captionBox(): DOMRect | undefined {
-  if (!capEl.classList.contains('show') || !capEl.textContent) return undefined;
+  if (!element.caption.classList.contains('show') || !element.caption.textContent) return undefined;
   const range = document.createRange();
-  range.selectNodeContents(capEl);
+  range.selectNodeContents(element.caption);
   return range.getBoundingClientRect();
 }
 
 function updateCaption(): void {
-  const caps = career.story.captions;
+  const captions = career.story.captions.items;
   const now = player.now;
-  let want = -1;
-  caps.forEach((c, i) => {
-    if (c.t <= now && now < c.t + c.dur) want = i;
-  });
-  if (want === capIdx) return;
-  const redraw = capIdx === -2;
-  capIdx = want;
-  clearTimeout(capTimer);
-  if (want < 0) {
-    capEl.classList.remove('show');
+  let wanted: number | null = null;
+  for (const [index, shown] of captions.entries())
+    if (shown.time <= now && now < shown.time + shown.duration) wanted = index;
+  if (!caption.stale && wanted === caption.shown) return;
+  const redraw = caption.stale;
+  caption.stale = false;
+  caption.shown = wanted;
+  clearTimeout(caption.timer);
+  if (wanted === null) {
+    element.caption.classList.remove('show');
     return;
   }
-  const c = caps[want];
-  if (!c) return;
-  if (redraw && capEl.classList.contains('show')) {
-    capEl.textContent = c.text[lang];
+  const text = captions[wanted]?.text;
+  if (!text) return;
+  if (redraw && element.caption.classList.contains('show')) {
+    element.caption.textContent = text[lang];
     return;
   }
-  capEl.classList.remove('show');
-  capTimer = window.setTimeout(
+  element.caption.classList.remove('show');
+  caption.timer = window.setTimeout(
     () => {
-      capEl.textContent = c.text[lang];
-      capEl.classList.add('show');
+      element.caption.textContent = text[lang];
+      element.caption.classList.add('show');
     },
-    capEl.textContent ? 700 : 50,
+    element.caption.textContent ? 700 : 50,
   );
 }
 
@@ -122,17 +139,24 @@ function setPaused(next: boolean): void {
   paused = next;
   player.hurry = false;
   if (paused) audio.scratch(0);
-  pauseBtn.textContent = (paused ? UI.resume : UI.pause)[lang];
-  pauseBtn.setAttribute('aria-pressed', String(paused));
+  label.pause();
+  button.pause.setAttribute('aria-pressed', String(paused));
+}
+
+/** Draws again from the start. */
+function restart(): void {
+  player.seek(0);
+  setPaused(false);
+  button.again.classList.remove('show');
 }
 
 /** The year the pen has reached, or the whole span once the drawing is done. */
 function updateYear(): void {
-  const year = (m: number) => String(Math.floor(m / 12));
+  const yearOf = (months: number) => String(Math.floor(months / 12));
   const text = player.revealed
-    ? `${year(monthAt(career, 0))} – ${year(career.today)}`
-    : year(monthAt(career, player.now));
-  if (yearEl.textContent !== text) yearEl.textContent = text;
+    ? `${yearOf(month.at(career, 0))} – ${yearOf(career.today)}`
+    : yearOf(month.at(career, player.now));
+  if (element.year.textContent !== text) element.year.textContent = text;
 }
 
 function resize(): void {
@@ -144,34 +168,30 @@ function start(withSound: boolean): void {
   if (started) return;
   started = true;
   document.body.classList.add('playing');
-  introEl.classList.add('gone');
+  element.intro.classList.add('gone');
   if (withSound) audio.init();
-  player.seek(0);
-  setPaused(false);
-  againBtn.classList.remove('show');
+  restart();
 }
 
 function leave(): void {
   started = false;
-  introEl.classList.remove('instant');
+  element.intro.classList.remove('instant');
   document.body.classList.remove('playing');
-  introEl.classList.remove('gone');
+  element.intro.classList.remove('gone');
   audio.scratch(0);
   cards.hide();
-  capEl.classList.remove('show');
-  againBtn.classList.remove('show');
-  player.seek(0);
-  setPaused(false);
-  careerBtn.focus();
+  element.caption.classList.remove('show');
+  restart();
+  button.career.focus();
 }
 
 /** Index of the stop being drawn at the current moment, or -1 before the first. */
 function currentStop(): number {
-  let idx = -1;
-  marks.forEach((m, i) => {
-    if (m.t0 <= player.now + 0.5) idx = i;
+  let current = -1;
+  marks.forEach((mark, index) => {
+    if (mark.start.time <= player.now + 0.5) current = index;
   });
-  return idx;
+  return current;
 }
 
 function jump(delta: number): void {
@@ -179,37 +199,38 @@ function jump(delta: number): void {
   const target = Math.max(-1, Math.min(marks.length, currentStop() + delta));
   if (target < 0) player.seek(0);
   else if (target >= marks.length) player.seek(career.end + 1.5);
-  else player.seek((marks[target] as StopMark).t0);
-  againBtn.classList.remove('show');
+  else player.seek((marks[target] as StopMark).start.time);
+  button.again.classList.remove('show');
 }
 
-let last = 0;
-function frame(ts: number): void {
+let previousTimestamp = 0;
+function frame(timestamp: number): void {
   requestAnimationFrame(frame);
-  const dt = Math.min(0.05, (ts - (last || ts)) / 1000);
-  last = ts;
+  const elapsed = Math.min(0.05, (timestamp - (previousTimestamp || timestamp)) / 1000);
+  previousTimestamp = timestamp;
   if (started) {
-    player.update(dt, !paused);
-    cards.update(player, renderer, { caption: captionBox(), hud: hudEl.getBoundingClientRect() });
+    player.update(elapsed, !paused);
+    cards.update(player, renderer, { caption: captionBox(), hud: element.hud.getBoundingClientRect() });
     updateCaption();
     updateYear();
-    progEl.style.width = `${player.progress * 100}%`;
-    if (player.now > career.end + 10) againBtn.classList.add('show');
+    element.progress.style.width = `${player.progress * 100}%`;
+    if (player.now > career.end + 10) button.again.classList.add('show');
   }
   player.draw();
 }
 
 addEventListener('resize', resize);
-careerBtn.addEventListener('click', () => start(true));
+button.career.addEventListener('click', () => start(true));
 // Scrolling moves time: down draws ahead, up rewinds. A mouse notch is about two seconds.
 canvas.addEventListener(
   'wheel',
-  e => {
+  event => {
     if (!started) return;
-    e.preventDefault();
-    const px = (e.deltaY + e.deltaX) * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? innerHeight : 1);
-    player.scrub(px * 0.02);
-    againBtn.classList.toggle('show', player.now > career.end + 10);
+    event.preventDefault();
+    const pixels =
+      (event.deltaY + event.deltaX) * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? innerHeight : 1);
+    player.scrub(pixels * 0.02);
+    button.again.classList.toggle('show', player.now > career.end + 10);
   },
   { passive: false },
 );
@@ -223,57 +244,52 @@ addEventListener('pointerup', () => {
 addEventListener('pointercancel', () => {
   player.hurry = false;
 });
-addEventListener('keydown', e => {
-  if (e.target instanceof HTMLButtonElement && (e.code === 'Space' || e.code === 'Enter')) return;
-  if (e.code === 'Space') {
-    e.preventDefault();
-    if (started && !e.repeat) setPaused(!paused);
+addEventListener('keydown', event => {
+  if (event.target instanceof HTMLButtonElement && (event.code === 'Space' || event.code === 'Enter')) return;
+  if (event.code === 'Space') {
+    event.preventDefault();
+    if (started && !event.repeat) setPaused(!paused);
   }
-  if (e.key === 'Shift' && started && !paused) player.hurry = true;
-  if (e.code === 'ArrowRight') jump(1);
-  if (e.code === 'ArrowLeft') jump(-1);
-  if (e.code === 'Escape') cards.unpin();
-  if (e.code === 'KeyM') sndBtn.click();
+  if (event.key === 'Shift' && started && !paused) player.hurry = true;
+  if (event.code === 'ArrowRight') jump(1);
+  if (event.code === 'ArrowLeft') jump(-1);
+  if (event.code === 'Escape') cards.unpin();
+  if (event.code === 'KeyM') button.sound.click();
 });
-// A button clicked with the mouse lets go of focus, so Space pauses instead of pressing it again.
-// Buttons reached with the keyboard (detail 0) keep focus and their usual Space behaviour.
-addEventListener('click', e => {
-  const btn = e.target instanceof Element ? e.target.closest('button') : null;
-  if (btn && e.detail > 0) btn.blur();
+// A button clicked with the mouse lets go of focus, so Space pauses instead of pressing it again. Buttons reached with the keyboard (detail 0) keep focus and their usual Space behaviour.
+addEventListener('click', event => {
+  const pressed = event.target instanceof Element ? event.target.closest('button') : null;
+  if (pressed && event.detail > 0) pressed.blur();
 });
-addEventListener('keyup', e => {
-  if (e.key === 'Shift') player.hurry = false;
+addEventListener('keyup', event => {
+  if (event.key === 'Shift') player.hurry = false;
 });
-sndBtn.addEventListener('click', e => {
-  e.stopPropagation();
+button.sound.addEventListener('click', event => {
+  event.stopPropagation();
   if (!audio.ready) {
     audio.init();
     if (audio.muted) audio.toggle();
   } else {
     audio.toggle();
   }
-  sndBtn.textContent = (audio.muted ? UI.soundOff : UI.soundOn)[lang];
+  label.sound();
 });
-langBtn.addEventListener('click', () => {
+button.lang.addEventListener('click', () => {
   const next: Lang = lang === 'fr' ? 'en' : 'fr';
-  saveLang(next);
+  language.save(next);
   applyLang(next);
 });
-pauseBtn.addEventListener('click', () => setPaused(!paused));
-againBtn.addEventListener('click', () => {
-  player.seek(0);
-  setPaused(false);
-  againBtn.classList.remove('show');
-});
-backBtn.addEventListener('click', leave);
+button.pause.addEventListener('click', () => setPaused(!paused));
+button.again.addEventListener('click', restart);
+button.back.addEventListener('click', leave);
 
 // Development only: lets browser tests see where a card hangs from the line.
 if (import.meta.env.DEV)
   Object.assign(window, {
     lifeline: {
-      cardAnchorOnScreen: (i: number) => {
-        const m = marks[i] as StopMark;
-        return renderer.toScreen(player.cam, cardAnchor(m, renderer), m.y);
+      cardAnchorOnScreen: (index: number) => {
+        const mark = marks[index] as StopMark;
+        return renderer.toScreen(player.camera, cardAnchor(mark, renderer), mark.y);
       },
     },
   });
@@ -286,10 +302,10 @@ requestAnimationFrame(frame);
 const params = new URLSearchParams(location.search);
 const silent = window.self !== window.top || params.get('path') === 'career';
 if (silent) {
-  introEl.classList.add('instant');
+  element.intro.classList.add('instant');
   audio.muted = true;
-  sndBtn.textContent = UI.soundOff[lang];
+  label.sound();
   start(false);
 }
-const at = Number.parseFloat(params.get('t') ?? '');
-if (started && at > 0) player.seek(at);
+const seek = Number.parseFloat(params.get('t') ?? '');
+if (started && seek > 0) player.seek(seek);

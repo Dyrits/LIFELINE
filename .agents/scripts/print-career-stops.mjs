@@ -18,20 +18,20 @@ try {
   const { buildCareer } = await server.ssrLoadModule('/src/career/build.ts');
   const { tagName } = await server.ssrLoadModule('/src/career/cards.ts');
   const { CAREER } = await server.ssrLoadModule('/src/data/career.ts');
-  const { currentMonth } = await server.ssrLoadModule('/src/i18n.ts');
+  const month = await server.ssrLoadModule('/src/month.ts');
   const lang = opt('lang') ?? 'fr';
-  const { stops, end } = buildCareer(CAREER, currentMonth());
+  const { stops, end } = buildCareer(CAREER, month.of(new Date()));
   const base = opt('urls');
   if (base) {
     const offset = Number(opt('offset') ?? 6);
     for (const m of stops) {
-      const t = m.t0 + Math.max(0.5, Math.min(offset, m.t1 - m.t0 - 1.5));
+      const t = m.start.time + Math.max(0.5, Math.min(offset, m.end.time - m.start.time - 1.5));
       console.log(`${base}/?path=career&lang=${lang}&t=${t.toFixed(2)}`);
     }
     if (args.includes('--end')) console.log(`${base}/?path=career&lang=${lang}&t=${(end + 12).toFixed(2)}`);
   } else {
     for (const m of stops)
-      console.log(`${m.index}\t${m.t0.toFixed(1)}\t${m.t1.toFixed(1)}\t${tagName(CAREER[m.index], lang)}`);
+      console.log(`${m.index}\t${m.start.time.toFixed(1)}\t${m.end.time.toFixed(1)}\t${tagName(CAREER[m.index], lang)}`);
     console.log(`end\t${end.toFixed(1)}`);
   }
 } finally {

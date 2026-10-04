@@ -1,82 +1,99 @@
 import { describe, expect, it } from 'vitest';
-import { buildCareer, monthAt, monthIndex } from '../src/career/build';
+import { buildCareer, THREAD } from '../src/career/build';
 import { CAREER } from '../src/data/career';
+import * as month from '../src/month';
 
 const timeline = buildCareer(CAREER, '2026-10');
+const ink = (name: (typeof THREAD)['Ink' | 'Gold']) => timeline.story.threads.get(name).points;
 
 describe('career timeline', () => {
-  it('marks one stop per career entry group, in time order', () => {
+  it('marks one stop per career stop', () => {
     expect(timeline.stops).toHaveLength(CAREER.length);
-    timeline.stops.forEach((m, i) => {
-      expect(m.t1).toBeGreaterThan(m.t0);
-      const next = timeline.stops[i + 1];
-      if (next) expect(next.t0).toBeGreaterThanOrEqual(m.t1);
+  });
+
+  it('draws the stops in order, each after the last one ends', () => {
+    timeline.stops.forEach((mark, index) => {
+      expect(mark.end.time).toBeGreaterThan(mark.start.time);
+      const next = timeline.stops[index + 1];
+      if (next) expect(next.start.time).toBeGreaterThanOrEqual(mark.end.time);
     });
-    expect(timeline.end).toBeGreaterThan(timeline.stops.at(-1)?.t1 ?? Infinity);
+  });
+
+  it('ends the drawing after the last stop', () => {
+    expect(timeline.end).toBeGreaterThan(timeline.stops.at(-1)?.end.time ?? Infinity);
   });
 
   it('lays every thread down in time order', () => {
-    for (const [name, th] of timeline.story.threads)
-      th.pts.forEach((p, i) => {
-        if (i) expect(p.t, `${name}[${i}]`).toBeGreaterThanOrEqual((th.pts[i - 1]?.t ?? 0) - 1e-9);
-        expect(Number.isFinite(p.x) && Number.isFinite(p.y), `${name}[${i}]`).toBe(true);
+    for (const [name, thread] of timeline.story.threads)
+      thread.points.forEach((point, index) => {
+        if (index)
+          expect(point.time, `${name}[${index}]`).toBeGreaterThanOrEqual((thread.points[index - 1]?.time ?? 0) - 1e-9);
+        expect(Number.isFinite(point.x) && Number.isFinite(point.y), `${name}[${index}]`).toBe(true);
       });
   });
 
   it('draws the ink line without ever lifting the pen', () => {
-    const lifts = timeline.story.get('A').pts.filter(p => p.up);
+    const lifts = ink(THREAD.Ink).filter(point => point.up);
     expect(lifts).toEqual([]);
   });
 
   it('draws the gold thread only for training stops', () => {
-    const gold = timeline.story.get('C').pts;
+    const gold = ink(THREAD.Gold);
     expect(gold.length).toBeGreaterThan(0);
-    const trainingStarts = timeline.stops.filter((_, i) => CAREER[i]?.kind === 'training').map(m => m.t0);
-    expect(gold[0]?.t).toBeGreaterThanOrEqual(trainingStarts[0] ?? Infinity);
+    const trainingStarts = timeline.stops
+      .filter((_, index) => CAREER[index]?.kind === 'Training')
+      .map(mark => mark.start.time);
+    expect(gold[0]?.time).toBeGreaterThanOrEqual(trainingStarts[0] ?? Infinity);
   });
 
   it('leaves time to read each card', () => {
-    for (const m of timeline.stops) expect(m.t1 - m.t0).toBeGreaterThan(3);
+    for (const mark of timeline.stops) expect(mark.end.time - mark.start.time).toBeGreaterThan(3);
   });
 
-  it('counts the years forward from the first job to today', () => {
-    expect(Math.floor(monthAt(timeline, 0) / 12)).toBe(2011);
-    expect(monthAt(timeline, timeline.end + 5)).toBe(monthIndex('2026-10'));
-    let prev = -Infinity;
-    for (let t = 0; t < timeline.end; t += 0.5) {
-      const m = monthAt(timeline, t);
-      expect(m).toBeGreaterThanOrEqual(prev);
-      prev = m;
+  it('starts the year counter at the first job', () => {
+    expect(Math.floor(month.at(timeline, 0) / 12)).toBe(2011);
+  });
+
+  it('ends the year counter on today', () => {
+    expect(month.at(timeline, timeline.end + 5)).toBe(month.index('2026-10'));
+  });
+
+  it('never counts the years backwards', () => {
+    let previous = -Infinity;
+    for (let time = 0; time < timeline.end; time += 0.5) {
+      const reached = month.at(timeline, time);
+      expect(reached).toBeGreaterThanOrEqual(previous);
+      previous = reached;
     }
   });
 
   it('tells each stop’s line of story while it is drawn', () => {
-    timeline.stops.forEach((m, i) => {
-      const t = (m.t0 + m.t1) / 2;
-      const shown = timeline.story.captions.filter(c => c.t <= t && t < c.t + c.dur).at(-1);
-      expect(shown?.text, `stop ${i}`).toBe(CAREER[i]?.caption);
+    timeline.stops.forEach((mark, index) => {
+      const time = (mark.start.time + mark.end.time) / 2;
+      const shown = timeline.story.captions.items
+        .filter(caption => caption.time <= time && time < caption.time + caption.duration)
+        .at(-1);
+      expect(shown?.text, `stop ${index}`).toBe(CAREER[index]?.caption);
     });
   });
 
   it('tells each chapter on the way to its stop, long enough to read', () => {
-    timeline.stops.forEach((m, i) => {
-      const chapter = CAREER[i]?.chapter;
+    timeline.stops.forEach((mark, index) => {
+      const chapter = CAREER[index]?.chapter;
       if (!chapter) return;
-      const told = timeline.story.captions.find(c => c.text === chapter);
-      expect(told?.t, `stop ${i}`).toBeLessThan(m.t0);
-      expect(told?.dur, `stop ${i}`).toBeGreaterThan(4);
+      const told = timeline.story.captions.items.find(caption => caption.text === chapter);
+      expect(told?.time, `stop ${index}`).toBeLessThan(mark.start.time);
+      expect(told?.duration, `stop ${index}`).toBeGreaterThan(4);
     });
-    expect(CAREER.filter(s => s.chapter)).toHaveLength(3);
   });
 
   it('records where the pen ends each stop', () => {
-    for (const m of timeline.stops) {
-      const pen = timeline.story
-        .get('A')
-        .pts.filter(p => p.t <= m.t1)
+    for (const mark of timeline.stops) {
+      const pen = ink(THREAD.Ink)
+        .filter(point => point.time <= mark.end.time)
         .at(-1);
-      expect(m.endX).toBeCloseTo(pen?.x ?? Number.NaN, -1);
-      expect(m.endX).toBeGreaterThan(m.x);
+      expect(mark.end.x).toBeCloseTo(pen?.x ?? Number.NaN, -1);
+      expect(mark.end.x).toBeGreaterThan(mark.start.x);
     }
   });
 

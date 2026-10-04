@@ -1,22 +1,31 @@
 import { describe, expect, it } from 'vitest';
-import { SHAPE_KEYS, shapeOf } from '../src/career/motifs';
+import { shape } from '../src/career/motifs';
 
 describe('job shapes', () => {
-  it.each(SHAPE_KEYS)('%s starts on the line and carries on along it', key => {
-    const { outline } = shapeOf(key);
-    expect(outline[0]).toEqual([0, 0]);
-    const exit = outline.at(-1);
+  it.each(shape.keys)('%s starts on the line', key => {
+    expect(shape.of(key).outline[0]).toEqual([0, 0]);
+  });
+
+  it.each(shape.keys)('%s hands the line on further along it', key => {
+    const exit = shape.of(key).outline.at(-1);
     expect(exit?.[0]).toBeGreaterThan(150);
     // Training shapes hand over to the gold thread, which rides just under the line.
     expect([0, 14]).toContain(exit?.[1]);
   });
 
-  it.each(SHAPE_KEYS)('%s stays above the line and within a screen', key => {
-    const { outline, details } = shapeOf(key);
-    for (const s of [outline, ...details])
-      for (const [x, y] of s) {
+  it.each(shape.keys)('%s stays above the line', key => {
+    const { outline, details } = shape.of(key);
+    for (const stroke of [outline, ...details])
+      for (const [, y] of stroke) {
         expect(y).toBeLessThanOrEqual(20);
         expect(y).toBeGreaterThan(-300);
+      }
+  });
+
+  it.each(shape.keys)('%s fits within a screen width', key => {
+    const { outline, details } = shape.of(key);
+    for (const stroke of [outline, ...details])
+      for (const [x] of stroke) {
         expect(x).toBeGreaterThanOrEqual(0);
         expect(x).toBeLessThan(400);
       }

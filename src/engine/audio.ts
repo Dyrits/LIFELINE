@@ -1,127 +1,107 @@
 import { midi } from './math';
 import type { Cue } from './story';
 
-/** Generated sound: soft bell notes, a heartbeat and the scratch of the nib. */
+/** Generated sound: soft bell notes and the scratch of the nib. */
 export class Audio {
-  private ctx: AudioContext | null = null;
+  private context: AudioContext | null = null;
   private master: GainNode | null = null;
   private reverb: ConvolverNode | null = null;
   private scratchGain: GainNode | null = null;
   muted = false;
 
+  /** Plays each kind of cue; the type checker reports a kind left out. */
+  private readonly handlers: { readonly [Kind in Cue['kind']]: (cue: Extract<Cue, { kind: Kind }>) => void } = {
+    Chord: cue => {
+      cue.notes.forEach((note, index) => {
+        this.note(midi(note), index * cue.gap, cue.velocity, cue.duration);
+      });
+    },
+    Note: cue => {
+      this.note(midi(cue.note), 0, cue.velocity, cue.duration);
+    },
+  };
+
   get ready(): boolean {
-    return this.ctx !== null;
+    return this.context !== null;
   }
 
   init(): void {
-    if (this.ctx || typeof AudioContext === 'undefined') return;
-    const c = new AudioContext();
-    this.ctx = c;
-    this.master = c.createGain();
+    if (this.context || typeof AudioContext === 'undefined') return;
+    const context = new AudioContext();
+    this.context = context;
+    this.master = context.createGain();
     this.master.gain.value = this.muted ? 0 : 0.8;
-    this.master.connect(c.destination);
-    const len = c.sampleRate * 3;
-    const ir = c.createBuffer(2, len, c.sampleRate);
-    for (let ch = 0; ch < 2; ch++) {
-      const d = ir.getChannelData(ch);
-      for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len) ** 3.2;
+    this.master.connect(context.destination);
+    const length = context.sampleRate * 3;
+    const impulse = context.createBuffer(2, length, context.sampleRate);
+    for (let channel = 0; channel < 2; channel++) {
+      const data = impulse.getChannelData(channel);
+      for (let index = 0; index < length; index++) data[index] = (Math.random() * 2 - 1) * (1 - index / length) ** 3.2;
     }
-    this.reverb = c.createConvolver();
-    this.reverb.buffer = ir;
-    const wet = c.createGain();
+    this.reverb = context.createConvolver();
+    this.reverb.buffer = impulse;
+    const wet = context.createGain();
     wet.gain.value = 0.55;
     this.reverb.connect(wet);
     wet.connect(this.master);
     // Pen scratch: looped noise through a band-pass, level follows the nib speed.
-    const nb = c.createBuffer(1, c.sampleRate * 2, c.sampleRate);
-    const nd = nb.getChannelData(0);
-    for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
-    const src = c.createBufferSource();
-    src.buffer = nb;
-    src.loop = true;
-    const bp = c.createBiquadFilter();
-    bp.type = 'bandpass';
-    bp.frequency.value = 2600;
-    bp.Q.value = 0.7;
-    this.scratchGain = c.createGain();
+    const noise = context.createBuffer(1, context.sampleRate * 2, context.sampleRate);
+    const samples = noise.getChannelData(0);
+    for (let index = 0; index < samples.length; index++) samples[index] = Math.random() * 2 - 1;
+    const source = context.createBufferSource();
+    source.buffer = noise;
+    source.loop = true;
+    const bandpass = context.createBiquadFilter();
+    bandpass.type = 'bandpass';
+    bandpass.frequency.value = 2600;
+    bandpass.Q.value = 0.7;
+    this.scratchGain = context.createGain();
     this.scratchGain.gain.value = 0;
-    src.connect(bp);
-    bp.connect(this.scratchGain);
+    source.connect(bandpass);
+    bandpass.connect(this.scratchGain);
     this.scratchGain.connect(this.master);
-    src.start();
+    source.start();
   }
 
   play(cue: Cue): void {
-    switch (cue.kind) {
-      case 'chord':
-        cue.notes.forEach((n, i) => {
-          this.note(midi(n), i * cue.gap, cue.vel, cue.dur);
-        });
-        break;
-      case 'note':
-        this.note(midi(cue.note), 0, cue.vel, cue.dur);
-        break;
-      case 'beat':
-        this.beat(cue.vel);
-        break;
-    }
+    (this.handlers[cue.kind] as (cue: Cue) => void)(cue);
   }
 
-  private note(f: number, when: number, vel: number, dur: number): void {
-    const c = this.ctx;
-    if (!c || !this.master || !this.reverb) return;
-    const t = c.currentTime + when;
-    const o = c.createOscillator();
-    const o2 = c.createOscillator();
-    const g = c.createGain();
-    const g2 = c.createGain();
-    o.type = 'sine';
-    o.frequency.value = f;
-    o2.type = 'triangle';
-    o2.frequency.value = f * 2;
-    g2.gain.value = 0.22;
-    g.gain.setValueAtTime(0, t);
-    g.gain.linearRampToValueAtTime(vel, t + 0.012);
-    g.gain.exponentialRampToValueAtTime(0.0006, t + dur);
-    o.connect(g);
-    o2.connect(g2);
-    g2.connect(g);
-    g.connect(this.master);
-    g.connect(this.reverb);
-    o.start(t);
-    o2.start(t);
-    o.stop(t + dur + 0.1);
-    o2.stop(t + dur + 0.1);
+  private note(frequency: number, when: number, velocity: number, duration: number): void {
+    const context = this.context;
+    if (!context || !this.master || !this.reverb) return;
+    const time = context.currentTime + when;
+    const oscillator = context.createOscillator();
+    const overtone = context.createOscillator();
+    const gain = context.createGain();
+    const overtoneGain = context.createGain();
+    oscillator.type = 'sine';
+    oscillator.frequency.value = frequency;
+    overtone.type = 'triangle';
+    overtone.frequency.value = frequency * 2;
+    overtoneGain.gain.value = 0.22;
+    gain.gain.setValueAtTime(0, time);
+    gain.gain.linearRampToValueAtTime(velocity, time + 0.012);
+    gain.gain.exponentialRampToValueAtTime(0.0006, time + duration);
+    oscillator.connect(gain);
+    overtone.connect(overtoneGain);
+    overtoneGain.connect(gain);
+    gain.connect(this.master);
+    gain.connect(this.reverb);
+    oscillator.start(time);
+    overtone.start(time);
+    oscillator.stop(time + duration + 0.1);
+    overtone.stop(time + duration + 0.1);
   }
 
-  private beat(v: number): void {
-    const c = this.ctx;
-    const master = this.master;
-    if (!c || !master) return;
-    const t = c.currentTime;
-    [0, 0.19].forEach((d, i) => {
-      const o = c.createOscillator();
-      const g = c.createGain();
-      const vv = v * (i ? 0.6 : 1);
-      o.type = 'sine';
-      o.frequency.setValueAtTime(95, t + d);
-      o.frequency.exponentialRampToValueAtTime(38, t + d + 0.18);
-      g.gain.setValueAtTime(0, t + d);
-      g.gain.linearRampToValueAtTime(vv, t + d + 0.01);
-      g.gain.exponentialRampToValueAtTime(0.001, t + d + 0.36);
-      o.connect(g);
-      g.connect(master);
-      o.start(t + d);
-      o.stop(t + d + 0.4);
-    });
-  }
-
-  scratch(v: number): void {
-    if (this.ctx && this.scratchGain) this.scratchGain.gain.setTargetAtTime(v, this.ctx.currentTime, 0.06);
+  /** Sets the pen scratch's level, following the nib speed. */
+  scratch(level: number): void {
+    if (this.context && this.scratchGain) this.scratchGain.gain.setTargetAtTime(level, this.context.currentTime, 0.06);
   }
 
   toggle(): void {
     this.muted = !this.muted;
-    if (this.ctx && this.master) this.master.gain.setTargetAtTime(this.muted ? 0 : 0.8, this.ctx.currentTime, 0.1);
+    if (this.context && this.master)
+      this.master.gain.setTargetAtTime(this.muted ? 0 : 0.8, this.context.currentTime, 0.1);
   }
 }

@@ -1,28 +1,47 @@
+/** A full turn, in radians. */
 export const TAU = Math.PI * 2;
-export const clamp = (v: number, a: number, b: number): number => (v < a ? a : v > b ? b : v);
-export const lerp = (a: number, b: number, t: number): number => a + (b - a) * t;
-export const ease = (t: number): number => t * t * (3 - 2 * t);
-export const eout = (t: number): number => 1 - (1 - t) * (1 - t);
-const hash = (i: number): number => {
-  const s = Math.sin(i * 127.1 + 311.7) * 43758.5453;
-  return s - Math.floor(s);
+
+/** A position on the drawing; y grows downwards. */
+export type Point = readonly [x: number, y: number];
+
+/** `value` held between `min` and `max`. */
+export const clamp = (value: number, min: number, max: number): number =>
+  value < min ? min : value > max ? max : value;
+
+/** The value a fraction `time` of the way from `start` to `end`. */
+export const lerp = (start: number, end: number, time: number): number => start + (end - start) * time;
+
+/** Easing curves over [0, 1]. */
+export const ease = {
+  /** Slow at both ends. */
+  inOut: (time: number): number => time * time * (3 - 2 * time),
+  /** Fast at first, slowing down to arrive. */
+  out: (time: number): number => 1 - (1 - time) * (1 - time),
 };
+
+const hash = (index: number): number => {
+  const value = Math.sin(index * 127.1 + 311.7) * 43758.5453;
+  return value - Math.floor(value);
+};
+
 /** Smooth 1D value noise in [-1, 1]. */
-export const noise1 = (x: number): number => {
-  const i = Math.floor(x);
-  const f = x - i;
-  return lerp(hash(i), hash(i + 1), f * f * (3 - 2 * f)) * 2 - 1;
+export const noise = (x: number): number => {
+  const index = Math.floor(x);
+  const fraction = x - index;
+  return lerp(hash(index), hash(index + 1), fraction * fraction * (3 - 2 * fraction)) * 2 - 1;
 };
+
 /** Frequency of a MIDI note. */
-export const midi = (n: number): number => 440 * 2 ** ((n - 69) / 12);
+export const midi = (note: number): number => 440 * 2 ** ((note - 69) / 12);
+
 /** Seeded random generator in [0, 1). */
 export const mulberry = (seed: number) => {
-  let a = seed;
+  let state = seed;
   return (): number => {
-    a |= 0;
-    a = (a + 0x6d2b79f5) | 0;
-    let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    state |= 0;
+    state = (state + 0x6d2b79f5) | 0;
+    let mixed = Math.imul(state ^ (state >>> 15), 1 | state);
+    mixed = (mixed + Math.imul(mixed ^ (mixed >>> 7), 61 | mixed)) ^ mixed;
+    return ((mixed ^ (mixed >>> 14)) >>> 0) / 4294967296;
   };
 };

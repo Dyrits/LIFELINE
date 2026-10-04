@@ -1,17 +1,18 @@
 import type { Audio } from './audio';
 import { clamp, ease, lerp } from './math';
-import { type Camera, type Renderer, tip } from './render';
+import { type Camera, type Renderer, type Tip, tip } from './render';
 import type { Bounds, Story } from './story';
 
-export type PlayerOptions = Readonly<{
+/** Which threads a player draws, and which ones the camera follows. */
+export type PlayerOptions<Name extends string> = Readonly<{
   /** Threads in drawing order, back to front. */
-  order: readonly string[];
+  order: readonly Name[];
   /** Threads the camera follows while they draw, with their pull. */
-  follow: readonly (readonly [name: string, weight: number])[];
+  follow: readonly (readonly [name: Name, weight: number])[];
   /** Thread whose tip leads the camera and the pen scratch. */
-  lead: string;
+  lead: Name;
   /** Height of the line at a moment; when given, the camera holds it steady instead of chasing the pen up and down. */
-  baseline?: (t: number) => number;
+  baseline?: (time: number) => number;
 }>;
 
 const HURRY = 3.4;
@@ -21,21 +22,21 @@ export const PEN_AHEAD = 0.12;
 const AFTER_END = 12;
 
 /** Plays a built story: advances time, fires sound cues, moves the camera and draws each frame. */
-export class Player {
+export class Player<Name extends string> {
   now = 0;
   hurry = false;
-  readonly cam: Camera = { x: 0, y: 0, z: 1 };
-  private spd = 1;
-  private cueIdx = 0;
+  readonly camera: Camera = { x: 0, y: 0, zoom: 1 };
+  private speed = 1;
+  private cueIndex = 0;
   private lastTipX: number | null = null;
   private readonly bounds: Bounds;
 
   constructor(
     private readonly renderer: Renderer,
-    readonly story: Story,
+    readonly story: Story<Name>,
     readonly end: number,
     private readonly audio: Audio,
-    private readonly opts: PlayerOptions,
+    private readonly options: PlayerOptions<Name>,
   ) {
     this.bounds = story.bounds();
     this.seek(0);
@@ -50,110 +51,117 @@ export class Player {
   }
 
   /** Jumps to a moment without replaying the sounds in between; the camera cuts there. */
-  seek(t: number): void {
-    this.moveTo(t);
-    this.spd = 1;
-    Object.assign(this.cam, this.target());
+  seek(time: number): void {
+    this.moveTo(time);
+    this.speed = 1;
+    Object.assign(this.camera, this.target());
   }
 
-  /** Moves time by `dt` seconds, either way, without replaying sounds; the camera glides there. */
-  scrub(dt: number): void {
-    this.moveTo(clamp(this.now + dt, 0, this.end + AFTER_END));
+  /** Moves time by `elapsed` seconds, either way, without replaying sounds; the camera glides there. */
+  scrub(elapsed: number): void {
+    this.moveTo(clamp(this.now + elapsed, 0, this.end + AFTER_END));
   }
 
-  private moveTo(t: number): void {
-    this.now = Math.max(0, t);
-    const cues = this.story.cues;
-    this.cueIdx = cues.findIndex(c => c.t > this.now);
-    if (this.cueIdx < 0) this.cueIdx = cues.length;
+  private moveTo(time: number): void {
+    this.now = Math.max(0, time);
+    const cues = this.story.cues.items;
+    this.cueIndex = cues.findIndex(cue => cue.time > this.now);
+    if (this.cueIndex < 0) this.cueIndex = cues.length;
     this.lastTipX = null;
   }
 
-  /** Advances time by dt, unless `advance` is false (paused), and lets the camera catch up either way. */
-  update(dt: number, advance = true): void {
-    const reveal = this.revealed;
-    this.spd += ((this.hurry && !reveal ? HURRY : 1) - this.spd) * (1 - Math.exp(-dt * 4));
-    if (advance) this.now += dt * this.spd;
-    const cues = this.story.cues;
-    while (this.cueIdx < cues.length) {
-      const c = cues[this.cueIdx];
-      if (!c || c.t > this.now) break;
+  /** Advances time by `elapsed`, unless `advance` is false (paused), and lets the camera catch up either way. */
+  update(elapsed: number, advance = true): void {
+    const revealed = this.revealed;
+    this.speed += ((this.hurry && !revealed ? HURRY : 1) - this.speed) * (1 - Math.exp(-elapsed * 4));
+    if (advance) this.now += elapsed * this.speed;
+    const cues = this.story.cues.items;
+    while (this.cueIndex < cues.length) {
+      const cue = cues[this.cueIndex];
+      if (!cue || cue.time > this.now) break;
       // Hurrying skips the music rather than piling it up.
-      if (this.spd < 2.5 || c.t > this.end) this.audio.play(c);
-      this.cueIdx++;
+      if (this.speed < 2.5 || cue.time > this.end) this.audio.play(cue);
+      this.cueIndex++;
     }
     const target = this.target();
-    const k = reveal ? 1 - Math.exp(-dt * 0.7) : 1 - Math.exp(-dt * 2.2 * Math.sqrt(this.spd));
-    this.cam.x += (target.x - this.cam.x) * k;
-    this.cam.y += (target.y - this.cam.y) * k;
-    this.cam.z += (target.z - this.cam.z) * k;
+    const rate = revealed ? 1 - Math.exp(-elapsed * 0.7) : 1 - Math.exp(-elapsed * 2.2 * Math.sqrt(this.speed));
+    this.camera.x += (target.x - this.camera.x) * rate;
+    this.camera.y += (target.y - this.camera.y) * rate;
+    this.camera.zoom += (target.zoom - this.camera.zoom) * rate;
     // Easing never quite arrives: settle once close, so a paused drawing stands perfectly still.
     if (
-      Math.abs(target.x - this.cam.x) < 0.05 &&
-      Math.abs(target.y - this.cam.y) < 0.05 &&
-      Math.abs(target.z - this.cam.z) < 1e-4
+      Math.abs(target.x - this.camera.x) < 0.05 &&
+      Math.abs(target.y - this.camera.y) < 0.05 &&
+      Math.abs(target.zoom - this.camera.zoom) < 1e-4
     )
-      Object.assign(this.cam, target);
+      Object.assign(this.camera, target);
 
-    const lead = tip(this.story.get(this.opts.lead), this.now);
-    if (reveal || !lead) {
+    const lead = this.tipOf(this.options.lead);
+    if (revealed || !lead) {
       this.audio.scratch(0);
     } else {
       if (this.lastTipX !== null && !this.audio.muted)
-        this.audio.scratch(clamp((Math.abs(lead.x - this.lastTipX) / Math.max(dt, 1e-3)) * 0.00011, 0, 0.035));
+        this.audio.scratch(clamp((Math.abs(lead.x - this.lastTipX) / Math.max(elapsed, 1e-3)) * 0.00011, 0, 0.035));
       this.lastTipX = lead.x;
     }
   }
 
+  /** Draws the current frame. */
   draw(): void {
-    this.renderer.draw(this.story, this.cam, this.now, this.opts.order);
+    this.renderer.render(this.story, this.camera, this.now, this.options.order);
   }
 
-  private zoomAt(t: number): number {
-    const zk = this.story.zooms;
-    let z = zk[0]?.[1] ?? 1;
-    for (let i = 1; i < zk.length; i++) {
-      const [ti, zi] = zk[i] as [number, number];
-      if (t < ti) break;
-      z = lerp((zk[i - 1] as [number, number])[1], zi, ease(clamp((t - ti) / 3, 0, 1)));
+  private tipOf(name: Name): Tip | null {
+    return tip(this.story.threads.get(name), this.now);
+  }
+
+  private zoomAt(time: number): number {
+    const zooms = this.story.zooms.items;
+    let zoom = zooms[0]?.zoom ?? 1;
+    for (let index = 1; index < zooms.length; index++) {
+      const step = zooms[index] as (typeof zooms)[number];
+      if (time < step.time) break;
+      zoom = lerp(
+        (zooms[index - 1] as (typeof zooms)[number]).zoom,
+        step.zoom,
+        ease.inOut(clamp((time - step.time) / 3, 0, 1)),
+      );
     }
-    return z;
+    return zoom;
   }
 
   /** Where the camera wants to be now: following the pens, or framing the whole drawing once it is done. */
   private target(): Camera {
-    const r = this.renderer;
-    const base = r.baseScale();
+    const renderer = this.renderer;
+    const baseScale = renderer.baseScale();
     if (this.revealed) {
-      const b = this.bounds;
-      const bw = Math.max(1, b.x1 - b.x0);
-      const bh = Math.max(1, b.y1 - b.y0);
+      const { min, max } = this.bounds;
+      const width = Math.max(1, max.x - min.x);
+      const height = Math.max(1, max.y - min.y);
       return {
-        x: (b.x0 + b.x1) / 2,
-        y: (b.y0 + b.y1) / 2 + bh * 0.08,
-        z: Math.min((r.W * 0.9) / bw, (r.H * 0.6) / bh) / base,
+        x: (min.x + max.x) / 2,
+        y: (min.y + max.y) / 2 + height * 0.08,
+        zoom: Math.min((renderer.width * 0.9) / width, (renderer.height * 0.6) / height) / baseScale,
       };
     }
-    const z = this.zoomAt(this.now);
-    const S = base * z;
-    let sx = 0;
-    let sy = 0;
-    let ws = 0;
-    for (const [name, w] of this.opts.follow) {
-      const p = tip(this.story.get(name), this.now);
-      if (p && p.done < 0.8) {
-        sx += p.x * w;
-        sy += p.y * w;
-        ws += w;
+    const zoom = this.zoomAt(this.now);
+    const scale = baseScale * zoom;
+    const sum = { weight: 0, x: 0, y: 0 };
+    for (const [name, weight] of this.options.follow) {
+      const followed = this.tipOf(name);
+      if (followed && followed.done < 0.8) {
+        sum.x += followed.x * weight;
+        sum.y += followed.y * weight;
+        sum.weight += weight;
       }
     }
-    const lead = tip(this.story.get(this.opts.lead), this.now);
-    const ly = lead?.y ?? 0;
-    const x = (ws ? sx / ws : (lead?.x ?? 0)) - (r.W * PEN_AHEAD) / S;
-    if (this.opts.baseline) {
+    const lead = this.tipOf(this.options.lead);
+    const leadY = lead?.y ?? 0;
+    const x = (sum.weight ? sum.x / sum.weight : (lead?.x ?? 0)) - (renderer.width * PEN_AHEAD) / scale;
+    if (this.options.baseline) {
       // Hold the line well above centre, leaving the lower part of the screen to the cards and the caption.
-      return { x, y: this.opts.baseline(this.now) + (r.H * 0.11) / S, z };
+      return { x, y: this.options.baseline(this.now) + (renderer.height * 0.11) / scale, zoom };
     }
-    return { x, y: clamp(ws ? sy / ws : ly, ly - 300, ly + 300), z };
+    return { x, y: clamp(sum.weight ? sum.y / sum.weight : leadY, leadY - 300, leadY + 300), zoom };
   }
 }

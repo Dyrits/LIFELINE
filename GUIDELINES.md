@@ -4,7 +4,7 @@
 
 - **Name things with whole words that say what they hold** (`thread`, `points`, `duration`, `context`), so a reader understands a name without tracing where it came from. A loop counter is `index` or `iteration`, a time is `time`. Coordinates keep `x` and `y`, which are already their names.
 - **One word per level; nest to add precision**: when two or more names share a word, that word becomes an object or module holding the rest, so the shared context is written once and every name stays one word. `widthMin` and `widthMax` become `width.min` and `width.max`; `parseDate` and `formatDate` become `date.parse` and `date.format`. A compound with no siblings stays flat (`parseDate` alone), since a group of one adds a level without adding precision.
-- **Options are PascalCase**: members of a string-literal union and of an `enum` read as names from a fixed set (`'SkeletonWeed'`, `'Chord'`), which sets them apart from free-form strings. Discriminants such as `kind` count as options.
+- **Options are PascalCase**: members of a string-literal union and of an `enum` read as names from a fixed set (`'SkeletonWeed'`, `'Chord'`), which sets them apart from free-form strings. Discriminants such as `kind` count as options. Language codes (`'fr'`, `'en'`) keep their standard lowercase form: they are defined outside the project and are shared with the URL, the saved preference and `<html lang>`.
 
 ## Size
 

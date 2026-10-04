@@ -1,80 +1,86 @@
 import type { CareerStop, Entry, Lang } from '../data/types';
+import { UI } from '../data/ui';
 import { PEN_AHEAD, type Player } from '../engine/player';
 import type { Renderer } from '../engine/render';
-import { monthSpan, UI } from '../i18n';
+import * as month from '../month';
 import type { StopMark } from './build';
 
-const esc = (s: string): string =>
-  s.replace(/[&<>"']/g, c => ({ "'": '&#39;', '"': '&quot;', '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c] ?? c);
+const escapeHtml = (text: string): string =>
+  text.replace(
+    /[&<>"']/g,
+    character => ({ "'": '&#39;', '"': '&quot;', '&': '&amp;', '<': '&lt;', '>': '&gt;' })[character] ?? character,
+  );
 
 /** The entries a stop's card tells: all of them, or only the first when the stop is split. */
-const ownEntries = (s: CareerStop): readonly Entry[] => (s.split ? s.entries.slice(0, 1) : s.entries);
+const ownEntries = (stop: CareerStop): readonly Entry[] => (stop.split ? stop.entries.slice(0, 1) : stop.entries);
 
 const year = (entries: readonly Entry[]): string => (entries[0] as Entry).from.slice(0, 4);
 
 /** The short name on a stop's tag: its label, else its companies; freelance missions are told apart by place. */
-export function tagName(s: CareerStop, lang: Lang, entries = ownEntries(s)): string {
-  if (s.label) return s.label[lang];
-  const companies = [...new Set(entries.map(e => e.company))].join(' · ');
-  return companies === 'Freelance' ? `Freelance · ${s.place[lang]}` : companies;
+export function tagName(stop: CareerStop, lang: Lang, entries = ownEntries(stop)): string {
+  if (stop.label) return stop.label[lang];
+  const companies = [...new Set(entries.map(entry => entry.company))].join(' · ');
+  return companies === 'Freelance' ? `${companies} · ${stop.place[lang]}` : companies;
 }
 
 /** The years a card covers: "2013 – 2016", a single year, or up to today. */
-function period(list: readonly Entry[], lang: Lang): string {
-  const from = Math.min(...list.map(e => Number(e.from.slice(0, 4))));
-  const open = list.some(e => e.to === null);
-  const to = Math.max(...list.map(e => Number((e.to ?? e.from).slice(0, 4))));
-  if (open) return `${from} – ${UI.today[lang]}`;
-  return from === to ? String(from) : `${from} – ${to}`;
+function period(entries: readonly Entry[], lang: Lang): string {
+  const first = Math.min(...entries.map(entry => Number(entry.from.slice(0, 4))));
+  const ongoing = entries.some(entry => entry.to === null);
+  const last = Math.max(...entries.map(entry => Number((entry.to ?? entry.from).slice(0, 4))));
+  if (ongoing) return `${first} – ${UI.today[lang]}`;
+  return first === last ? String(first) : `${first} – ${last}`;
 }
 
 /** A card's note, after the WAYPOINTS V3 cards: place and years, then each job by company, role and dates. */
-function body(s: CareerStop, lang: Lang, list: readonly Entry[]): string {
-  const where = s.country ? `${s.place[lang]}, ${s.country[lang]}` : s.place[lang];
-  const entries = list
-    .map(e => {
+function body(stop: CareerStop, lang: Lang, entries: readonly Entry[]): string {
+  const where = stop.country ? `${stop.place[lang]}, ${stop.country[lang]}` : stop.place[lang];
+  const sections = entries
+    .map(entry => {
       const badges = [
-        e.remote ? `<span class="badge away">${esc(UI.remote[lang])}</span>` : '',
-        e.context ? `<span class="badge">${esc(e.context[lang])}</span>` : '',
+        entry.remote ? `<span class="badge away">${escapeHtml(UI.remote[lang])}</span>` : '',
+        entry.context ? `<span class="badge">${escapeHtml(entry.context[lang])}</span>` : '',
       ].join('');
-      const bullets = e.bullets?.length ? `<ul>${e.bullets.map(b => `<li>${esc(b[lang])}</li>`).join('')}</ul>` : '';
+      const bullets = entry.bullets?.length
+        ? `<ul>${entry.bullets.map(bullet => `<li>${escapeHtml(bullet[lang])}</li>`).join('')}</ul>`
+        : '';
       return `<section>
-        <h3>${esc(e.company)}</h3>
-        <p class="role">${esc(e.role[lang])}</p>
-        <p class="dates mono">${esc(monthSpan(e.from, e.to, lang))}${badges}</p>
-        ${e.summary ? `<p class="sum">${esc(e.summary[lang])}</p>` : ''}
+        <h3>${escapeHtml(entry.company)}</h3>
+        <p class="role">${escapeHtml(entry.role[lang])}</p>
+        <p class="dates mono">${escapeHtml(month.span(entry.from, entry.to, lang))}${badges}</p>
+        ${entry.summary ? `<p class="sum">${escapeHtml(entry.summary[lang])}</p>` : ''}
         ${bullets}
       </section>`;
     })
     .join('');
-  const route = s.remoteFrom?.length
-    ? `<p class="route mono${s.kind === 'training' ? ' online' : ''}">${esc(UI.workedFrom[lang])} · ${s.remoteFrom
-        .map(p => esc(p === 'on-site' ? UI.onSite[lang] : p[lang]))
+  const route = stop.remoteFrom?.length
+    ? `<p class="route mono${stop.kind === 'Training' ? ' online' : ''}">${escapeHtml(UI.workedFrom[lang])} · ${stop.remoteFrom
+        .map(place => escapeHtml(place === 'OnSite' ? UI.onSite[lang] : place[lang]))
         .join(' → ')}</p>`
     : '';
-  return `<p class="kind mono"><span>${esc(where)}</span><span class="when">${esc(period(list, lang))}</span></p>${route}${entries}`;
+  return `<p class="kind mono"><span>${escapeHtml(where)}</span><span class="when">${escapeHtml(period(entries, lang))}</span></p>${route}${sections}`;
 }
 
 /** Room kept between a card and the left edge when its stop ends, allowing for the camera trailing the pen. */
 const EDGE = 90;
 
 /**
- * Where a stop's open card hangs from the line: the stop's start, or further along on a stop wider than the screen,
- * so the card is still on screen when the pen finishes the stop. It stays fixed to that point as the line moves.
+ * Where a stop's open card hangs from the line: the stop's start, or further along on a stop wider than the screen, so the card is still on screen when the pen finishes the stop. It stays fixed to that point as the line moves.
  */
-export function cardAnchor(m: StopMark, renderer: Renderer): number {
-  const reach = (renderer.W * (0.5 + PEN_AHEAD) - EDGE) / renderer.S;
-  return Math.max(m.x, m.endX - reach);
+export function cardAnchor(mark: StopMark, renderer: Renderer): number {
+  const reach = (renderer.width * (0.5 + PEN_AHEAD) - EDGE) / renderer.scale;
+  return Math.max(mark.start.x, mark.end.x - reach);
 }
 
 type CardState = {
-  el: HTMLElement;
-  tag: HTMLButtonElement;
-  inner: HTMLElement;
-  stop: number;
-  entries: readonly Entry[];
+  readonly element: HTMLElement;
+  readonly tag: HTMLButtonElement;
+  readonly inner: HTMLElement;
+  readonly stop: number;
+  readonly entries: readonly Entry[];
   /** For a split stop's later entries: the index of the shape the card stands beside. */
-  shape: number | null;
+  readonly shape: number | null;
+  /** Where the card stands on screen, easing towards where it should be. */
   x: number;
   y: number;
   placed: boolean;
@@ -93,20 +99,20 @@ export class CardLayer {
     private readonly stops: readonly CareerStop[],
     private readonly marks: readonly StopMark[],
   ) {
-    this.cards = stops.flatMap((s, i) => [
-      this.card(i, ownEntries(s), null),
-      ...(s.split ? s.entries.slice(1).map((e, k) => this.card(i, [e], k + 1)) : []),
+    this.cards = stops.flatMap((stop, index) => [
+      this.card(index, ownEntries(stop), null),
+      ...(stop.split ? stop.entries.slice(1).map((entry, shape) => this.card(index, [entry], shape + 1)) : []),
     ]);
   }
 
   private card(stop: number, entries: readonly Entry[], shape: number | null): CardState {
-    const el = document.createElement('article');
-    el.className = shape === null ? 'card' : 'card side';
-    if (shape === null) el.dataset.stop = String(stop);
-    else el.dataset.side = String(stop);
-    el.innerHTML = `<button class="tag mono" type="button"></button><div class="body"><div class="inner"></div></div>`;
-    const tag = el.querySelector('button') as HTMLButtonElement;
-    const inner = el.querySelector('.inner') as HTMLElement;
+    const element = document.createElement('article');
+    element.className = shape === null ? 'card' : 'card side';
+    if (shape === null) element.dataset.stop = String(stop);
+    else element.dataset.side = String(stop);
+    element.innerHTML = `<button class="tag mono" type="button"></button><div class="body"><div class="inner"></div></div>`;
+    const tag = element.querySelector('button') as HTMLButtonElement;
+    const inner = element.querySelector('.inner') as HTMLElement;
     tag.addEventListener('click', () => {
       this.pinned = this.pinned === stop ? null : stop;
     });
@@ -114,20 +120,22 @@ export class CardLayer {
     inner.addEventListener('click', () => {
       if (this.pinned === stop) this.pinned = null;
     });
-    this.root.append(el);
-    return { el, entries, inner, placed: false, shape, stop, tag, x: 0, y: 0 };
+    this.root.append(element);
+    return { element, entries, inner, placed: false, shape, stop, tag, x: 0, y: 0 };
   }
 
+  /** Writes every card and tag in a language. */
   render(lang: Lang): void {
-    for (const c of this.cards) {
-      const s = this.stops[c.stop] as CareerStop;
-      const name = tagName(s, lang, c.entries);
-      c.tag.innerHTML = `<span class="yr">${year(c.entries)}</span><span class="nm"> · ${esc(name)}</span>`;
-      c.tag.setAttribute('aria-label', `${year(c.entries)} · ${name}`);
-      c.inner.innerHTML = body(s, lang, c.entries);
+    for (const card of this.cards) {
+      const stop = this.stops[card.stop] as CareerStop;
+      const name = tagName(stop, lang, card.entries);
+      card.tag.innerHTML = `<span class="yr">${year(card.entries)}</span><span class="nm"> · ${escapeHtml(name)}</span>`;
+      card.tag.setAttribute('aria-label', `${year(card.entries)} · ${name}`);
+      card.inner.innerHTML = body(stop, lang, card.entries);
     }
   }
 
+  /** Folds a card reopened from its tag. */
   unpin(): void {
     this.pinned = null;
   }
@@ -138,8 +146,8 @@ export class CardLayer {
   }
 
   /** Open cards end above the controls and the caption's text; a card too long for the room left scrolls. */
-  update(
-    player: Player,
+  update<Name extends string>(
+    player: Player<Name>,
     renderer: Renderer,
     avoid: Readonly<{ hud?: DOMRect | undefined; caption?: DOMRect | undefined }> = {},
   ): void {
@@ -147,56 +155,58 @@ export class CardLayer {
     this.root.classList.remove('off');
     this.root.classList.toggle('overview', player.revealed);
     const { now, revealed } = player;
-    const { W, H } = renderer;
-    for (const c of this.cards) {
-      const i = c.stop;
-      const m = this.marks[i] as StopMark;
-      const side = c.shape === null ? null : m.shapes[c.shape];
-      const from = side?.t ?? m.t0;
-      // Open while the stop is drawn, folded on the stretch of line leading to the next one:
-      // left open, it would outlive its place on screen.
-      const auto = !revealed && now >= from && now < m.t1;
-      const open = auto || this.pinned === i;
+    const { width, height } = renderer;
+    for (const card of this.cards) {
+      const index = card.stop;
+      const mark = this.marks[index] as StopMark;
+      const side = card.shape === null ? null : mark.shapes[card.shape];
+      const since = side?.time ?? mark.start.time;
+      // Open while the stop is drawn, folded on the stretch of line leading to the next one: left open, it would outlive its place on screen.
+      const opens = !revealed && now >= since && now < mark.end.time;
+      const open = opens || this.pinned === index;
       // Side cards have no tag of their own on the line: they only exist while their stop is open.
-      const shown = side ? open : now >= m.t0;
-      const [ax, ay] = renderer.toScreen(player.cam, side?.x ?? (open ? cardAnchor(m, renderer) : m.x), side?.y ?? m.y);
-      let tx: number;
-      let ty: number;
+      const shown = side ? open : now >= mark.start.time;
+      const [anchorX, anchorY] = renderer.toScreen(
+        player.camera,
+        side?.x ?? (open ? cardAnchor(mark, renderer) : mark.start.x),
+        side?.y ?? mark.y,
+      );
+      const target = { x: 0, y: 0 };
       if (open && side) {
         // Beside the shape's top-right corner, rising from it.
-        const cw = c.el.offsetWidth;
-        const ch = c.el.offsetHeight;
-        tx = Math.min(Math.max(ax + 18, 16), W - cw - 16);
-        ty = Math.min(Math.max(ay - ch + 40, 64), H - ch - 16);
+        const cardWidth = card.element.offsetWidth;
+        const cardHeight = card.element.offsetHeight;
+        target.x = Math.min(Math.max(anchorX + 18, 16), width - cardWidth - 16);
+        target.y = Math.min(Math.max(anchorY - cardHeight + 40, 64), height - cardHeight - 16);
       } else if (open) {
-        const cw = c.el.offsetWidth;
+        const cardWidth = card.element.offsetWidth;
         // Fixed to the line: no clamp at the left edge, or the card would stop there while the line moves on.
-        tx = Math.min(ax - 30, W - cw - 16);
-        // Over the caption's text or the controls, the card ends above them rather than moving sideways,
-        // so it travels with the line without jumping.
-        const over = (r: DOMRect | undefined) => r !== undefined && tx < r.right && tx + cw > r.left;
+        target.x = Math.min(anchorX - 30, width - cardWidth - 16);
+        // Over the caption's text or the controls, the card ends above them rather than moving sideways, so it travels with the line without jumping.
+        const over = (box: DOMRect | undefined) =>
+          box !== undefined && target.x < box.right && target.x + cardWidth > box.left;
         const bottom = Math.min(
-          over(caption) ? (caption as DOMRect).top - 12 : H - 16,
-          over(hud) ? (hud as DOMRect).top - 12 : H - 16,
+          over(caption) ? (caption as DOMRect).top - 12 : height - 16,
+          over(hud) ? (hud as DOMRect).top - 12 : height - 16,
         );
         // Hang under the line; climb over it only when the line sits too low to leave a useful card.
-        ty = Math.max(64, Math.min(ay + 34, bottom - 200));
-        const room = `${Math.max(120, bottom - ty - c.tag.offsetHeight)}px`;
-        if (c.inner.style.maxHeight !== room) c.inner.style.maxHeight = room;
+        target.y = Math.max(64, Math.min(anchorY + 34, bottom - 200));
+        const room = `${Math.max(120, bottom - target.y - card.tag.offsetHeight)}px`;
+        if (card.inner.style.maxHeight !== room) card.inner.style.maxHeight = room;
       } else {
         // In the overview, tags shrink to their year and alternate on two rows so they never collide.
-        tx = ax + (revealed ? -20 : 4);
-        ty = ay + 18 + (revealed ? (i % 2) * 24 : 0);
+        target.x = anchorX + (revealed ? -20 : 4);
+        target.y = anchorY + 18 + (revealed ? (index % 2) * 24 : 0);
       }
-      const k = c.placed ? 0.3 : 1;
-      c.x += (tx - c.x) * k;
-      c.y += (ty - c.y) * k;
-      c.placed = shown;
-      c.el.style.transform = `translate3d(${c.x.toFixed(1)}px, ${c.y.toFixed(1)}px, 0)`;
-      c.el.classList.toggle('open', open);
-      c.el.classList.toggle('pinned', this.pinned === i);
-      const visible = shown && c.x < W + 40 && c.x > -360 && c.y < H + 40;
-      c.el.classList.toggle('shown', visible);
+      const easing = card.placed ? 0.3 : 1;
+      card.x += (target.x - card.x) * easing;
+      card.y += (target.y - card.y) * easing;
+      card.placed = shown;
+      card.element.style.transform = `translate3d(${card.x.toFixed(1)}px, ${card.y.toFixed(1)}px, 0)`;
+      card.element.classList.toggle('open', open);
+      card.element.classList.toggle('pinned', this.pinned === index);
+      const visible = shown && card.x < width + 40 && card.x > -360 && card.y < height + 40;
+      card.element.classList.toggle('shown', visible);
     }
   }
 }

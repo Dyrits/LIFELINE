@@ -171,9 +171,34 @@ Evidence: `npm run check` (54 tests), `npm run e2e` (7 tests); screenshots of fo
 - Not mine, found staged in git: the Merredin chapter / caption rewording in `src/data/career.ts`; its French
   "J’atteris en l’Australie" should read "J’atterris en Australie" (flagged to Dylan, not changed).
 
+## Code cleanup to GUIDELINES.md (delivered, CHG-0011; open findings below)
+
+Requested 2026-10-04 via `/review-and-refactor` from the empty tree; Dylan's decisions: `Lang` codes exempt from
+PascalCase (noted in `GUIDELINES.md`), `Story` collections and renderer draw methods nested, `beat`, `UI.close` and
+`PROFILE` deleted, thread ids as a typed `THREAD` map. Behaviour unchanged: the built story serialises identically
+before and after; `npm run check` (109 tests) and `npm run e2e` (13 tests) pass; screenshots of every stop match.
+Motif keys and other options named in the batches above are now PascalCase (`pickets` is `Pickets`).
+Review artefacts, dispositions and reports: `/tmp/lifeline-review/` (local, not kept).
+
+Open from the review, not refactors (behaviour or content; need red/green or Dylan):
+- Four French strings in `src/data/career.ts` use a plain space before `:` (requirement: non-breaking).
+- Stop captions end 1.4 s after their stop, while batch 3 says "until the next stop"; the card-drift fix gives the
+  connector to the chapter line. Needs Dylan's choice.
+- The page's meta description is English only (`index.html`).
+- Captions not in the first person or present tense, including the two closing ones; "Aujourd’hui" on a job whose
+  data ends 2026-06; "J’atteris en l’Australie" (already flagged). Need Dylan.
+- Unagreed extras found in code: M toggles sound, Escape folds a reopened card, an iframe starts Career silently,
+  hurrying skips the music. The hint is hidden at 640 px or less.
+- Existing glitch: the "Retracer" button shows for a moment after loading with `?t=`.
+- The red ✕ bullets use `::marker { content }`, which Safari may ignore; only Chromium was checked.
+- Agreed behaviours without a test (among them captions staying up until the next stop), and the documented
+  run time is stale: about 5 min 02 s, not 4 min 57 s.
+- Paper textures come back blank instead of throwing when the browser refuses a canvas: kept as it was, though
+  `GUIDELINES.md` lists an unavailable canvas under "throw"; the rule needs Dylan to say which case wins.
+
 ## Notes
 
 - Foldkit skill folders the user added to the workspace are not part of this app and are not committed.
-- Handoffs in `.agents/handoffs/` are committed; latest: `.agents/handoffs/2026-10-04-0135-feedback-batches-and-workspace-setup.md`; saved scripts: `.agents/scripts/INDEX.md`.
+- Handoffs in `.agents/handoffs/` are committed; latest: `.agents/handoffs/2026-10-04-1446-code-cleanup-delivered.md`; saved scripts: `.agents/scripts/INDEX.md`.
 - Deferred and offered work moved to `documentation/backlog.md` (2026-10-04).
 - Next step: Dylan's review of the flight and the weed, then of batches 2 to 5 and the card restyle.

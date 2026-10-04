@@ -1,32 +1,57 @@
 import type { CareerStop, Text, YearMonth } from '../data/types';
-import { ease, TAU } from '../engine/math';
-import { poly, Story, strokes } from '../engine/story';
-import { flight, hasShape, inkLength, type Shape, type Stroke, shapeOf } from './motifs';
+import { CAREER_CAPTIONS } from '../data/ui';
+import { ease, type Point, TAU } from '../engine/math';
+import { poly, Story, strokes, type Thread } from '../engine/story';
+import * as month from '../month';
+import { flight } from './flight';
+import { inkLength, type Shape, type Stroke, shape } from './motifs';
 
-export const INK = '#1d1b26';
-export const RED = '#b3262b';
-export const GOLD = '#c98d17';
-const APPRENTICE_COLOURS = [RED, GOLD, '#4f6b8a'] as const;
+/** The inks of the career. */
+const COLOUR = {
+  apprentices: { Apprentice0: '#b3262b', Apprentice1: '#c98d17', Apprentice2: '#4f6b8a' },
+  gold: '#c98d17',
+  ink: '#1d1b26',
+} as const;
+
+/** The pens that draw a career, by role. */
+export const THREAD = {
+  /** Three threads branching off the line while Dylan teaches. */
+  Apprentices: ['Apprentice0', 'Apprentice1', 'Apprentice2'],
+  /** The training thread. */
+  Gold: 'Gold',
+  /** The second pen of the training thread, for the lifted strokes of its shapes. */
+  GoldDetail: 'GoldDetail',
+  /** The line itself. */
+  Ink: 'Ink',
+  /** The second pen of the line, for the lifted strokes of its shapes. */
+  InkDetail: 'InkDetail',
+} as const;
+/** The name of a pen that draws the career. */
+export type ThreadName =
+  | typeof THREAD.Ink
+  | typeof THREAD.Gold
+  | typeof THREAD.InkDetail
+  | typeof THREAD.GoldDetail
+  | (typeof THREAD.Apprentices)[number];
 
 /** When a shape starts, and its top-right corner on the drawing. */
-export type ShapeMark = Readonly<{ t: number; x: number; y: number }>;
+export type ShapeMark = Readonly<{ time: number; x: number; y: number }>;
 
 /**
- * Where and when a stop is drawn, from t0 to t1, starting at (x, y); the pen ends it at `endX`.
+ * Where and when a stop is drawn: from the start's time and x to the end's, at height y.
  * `month` is when the stop began, counted in months since year 0; `shapes` follow the stop's motifs, in order.
  */
 export type StopMark = Readonly<{
   index: number;
-  t0: number;
-  t1: number;
-  x: number;
+  start: Readonly<{ time: number; x: number }>;
+  end: Readonly<{ time: number; x: number }>;
   y: number;
-  endX: number;
   month: number;
   shapes: readonly ShapeMark[];
 }>;
 
-export type Timeline = Readonly<{ story: Story; stops: readonly StopMark[]; end: number; today: number }>;
+/** A career built as a story, with where each stop lies, when the drawing ends and the month it ends on. */
+export type Timeline = Readonly<{ story: Story<ThreadName>; stops: readonly StopMark[]; end: number; today: number }>;
 
 /** Distance under the ink line at which the gold training thread rides. */
 const RIDE = 14;
@@ -35,315 +60,364 @@ const CLIMB = -28;
 /** Room along the line for each map pin and the name written above it. */
 const PIN_GAP = 118;
 /** The detail pen sets off once the outline is this far along, and draws at least this fast. */
-const DETAIL_LAG = 0.35;
-const DETAIL_SPEED = 250;
-/** A chapter line is told along the connector before its stop, which stretches to give time to read it. */
-const CHAPTER_TIME = 4.5;
-/** A signpost is passed slowly enough to read both boards. */
-const SIGNPOST_TIME = 3;
+const DETAIL = { lag: 0.35, speed: 250 } as const;
+/** Seconds some stretches of line last at least. */
+const TIME = {
+  /** A chapter line is told along the connector before its stop, which stretches to give time to read it. */
+  chapter: 4.5,
+  /** A signpost is passed slowly enough to read both boards. */
+  signpost: 3,
+} as const;
 
-export const monthIndex = (ym: YearMonth): number => {
-  const [y, m] = ym.split('-').map(Number);
-  return (y ?? 0) * 12 + (m ?? 1) - 1;
+/** The months a stop spans, counted from year 0. */
+const period = {
+  end: (stop: CareerStop, today: number): number =>
+    Math.max(...stop.entries.map(entry => (entry.to ? month.index(entry.to) : today))),
+  start: (stop: CareerStop): number => Math.min(...stop.entries.map(entry => month.index(entry.from))),
 };
 
-const stopStart = (s: CareerStop): number => Math.min(...s.entries.map(e => monthIndex(e.from)));
-const stopEnd = (s: CareerStop, today: number): number =>
-  Math.max(...s.entries.map(e => (e.to ? monthIndex(e.to) : today)));
-
-const words = (t: Text | undefined): number => (t ? t.fr.split(/\s+/).length : 0);
+const words = (text: Text | undefined): number => (text ? text.fr.split(/\s+/).length : 0);
 /** Seconds a reader needs for a stop's card and caption. */
-const readingTime = (s: CareerStop): number =>
+const readingTime = (stop: CareerStop): number =>
   2.5 +
-  words(s.caption) / 5 +
-  s.entries.reduce(
-    (n, e) => n + 3 + words(e.role) + words(e.summary) + (e.bullets ?? []).reduce((b, x) => b + words(x), 0),
+  words(stop.caption) / 5 +
+  stop.entries.reduce(
+    (sum, entry) =>
+      sum +
+      3 +
+      words(entry.role) +
+      words(entry.summary) +
+      (entry.bullets ?? []).reduce((bullets, bullet) => bullets + words(bullet), 0),
     0,
   ) /
     5;
 
-/**
- * Map pins, one per place worked from: the line rises into each pin and comes back down to its point. Returns the
- * path, `width` long, and how far along its length the pen reaches the top of each pin.
- */
-function pins(n: number, width: number): { path: (readonly [number, number])[]; tops: number[] } {
-  const [c, r] = [30, 11];
-  // Where the sides of the pin meet its head, measured from straight down.
-  const side = Math.acos(r / c);
-  const start = Math.atan2(Math.cos(side), Math.sin(side));
-  const path: (readonly [number, number])[] = [[0, 0]];
-  const tops: number[] = [];
-  let len = 0;
-  const to = (p: readonly [number, number]) => {
-    const q = path[path.length - 1] ?? p;
-    len += Math.hypot(p[0] - q[0], p[1] - q[1]);
-    path.push(p);
-  };
-  for (let i = 0; i < n; i++) {
-    const x = (width * (i + 0.5)) / n;
-    to([x, 0]);
-    // Up the right side, over the head, down the left side.
-    const sweep = TAU - (Math.PI - 2 * start);
-    for (let k = 0; k <= 20; k++) {
-      const a = start - (sweep * k) / 20;
-      to([x + r * Math.cos(a), -c + r * Math.sin(a)]);
-      if (k === 10) tops.push(len);
-    }
-    to([x, 0]);
-  }
-  to([width, 0]);
-  return { path, tops: tops.map(t => t / len) };
-}
-
-export function buildCareer(stops: readonly CareerStop[], today: YearMonth): Timeline {
-  const now = monthIndex(today);
-  const story = new Story(1.05);
-  story.thread('A', INK, 2.6, 3.1);
-  story.thread('C', GOLD, 2.0, 41.3);
-  // Second pens for the lifted strokes of a shape, so the line and the gold thread never break.
-  story.thread('D', INK, 1.9, 17.9);
-  story.thread('CD', GOLD, 1.5, 29.2);
-  APPRENTICE_COLOURS.forEach((col, k) => {
-    story.thread(`P${k}`, col, 1.2, 60 + k * 13);
-  });
-  const A = story.get('A');
-  const C = story.get('C');
-  const marks: StopMark[] = [];
+/** What the steps of a career share while it is built. */
+type Build = {
+  readonly story: Story<ThreadName>;
+  readonly ink: Thread;
+  readonly gold: Thread;
+  /** The current month, counted from year 0. */
+  readonly today: number;
   /** Month at which the gold thread, riding under the line, rejoins it; null when it is not drawn. */
-  let rideUntil: number | null = null;
+  rideUntil: number | null;
+};
 
-  /** While training lasts, the gold thread runs under whatever the ink line draws. */
-  const ride = (width: number, dy: (u: number) => number, dur: number) => {
-    if (rideUntil === null) return;
-    story.add('C', u => [width * u, dy(u)], { dur, raw: true });
-  };
-
-  // Lead-in.
-  story.caption({ en: 'My career, in a single line.', fr: 'Ma carrière, d’un seul trait.' }, 0.6, 4.2);
-  story.T = 0.9;
-  story.cue({ dur: 4, gap: 0.4, kind: 'chord', notes: [48, 55], t: 1, vel: 0.1 });
-  story.T += story.add('A', u => [620 * u, 0], { speed: 140, w: u => 0.2 + 0.8 * Math.min(1, u * 5) });
-
-  let prevEnd: number | null = null;
-  stops.forEach((stop, index) => {
-    const from = stopStart(stop);
-
-    // Flight: to a stop far away, the line flies from place to place over a map, its tip a plane.
-    if (index > 0 && stop.route) {
-      const route = stop.route;
-      const x0 = A.x;
-      const y0 = A.y;
-      const fl = flight(
-        route.map(p => p.at),
-        CLIMB,
-      );
-      const at = (p: readonly [number, number]) => [x0 + p[0], y0 + p[1]] as const;
-      const [mx, my, mr] = fl.map;
-      story.print({
-        land: 'sage',
-        r: mr,
-        rings: fl.land.map(r => r.map(at)),
-        sea: 'sky',
-        t: story.T,
-        x: x0 + mx,
-        y: y0 + my,
-      });
-      let d = 0;
-      const arrivals = fl.legs.map((leg, i) => {
-        const last = i === 0 || i === fl.legs.length - 1;
-        d += story.add('A', poly(leg.map(at)), { abs: true, speed: last ? 260 : 190, t0: story.T + d });
-        return story.T + d;
-      });
-      route.forEach((place, i) => {
-        const [px, py] = at(fl.places[i] ?? [0, 0]);
-        const t = arrivals[i] ?? story.T;
-        // A dot where the line reaches the place, drawn before it reaches the next one, then its name.
-        const dur = Math.min(0.3, (arrivals[i + 1] ?? Infinity) - t - 0.02);
-        story.add('D', u => [px + 3.5 * Math.cos(TAU * u), py + 3.5 * Math.sin(TAU * u)], {
-          abs: true,
-          dur,
-          raw: true,
-          t0: t,
-        });
-        story.label({ side: place.side, t, text: place.name, x: px, y: py });
-      });
-      story.plane({ pen: 'A', t0: arrivals[0] ?? story.T, t1: arrivals[route.length - 1] ?? story.T + d });
-      const end = fl.legs.at(-1)?.at(-1) ?? [0, 0];
-      if (stop.chapter) story.caption(stop.chapter, story.T, d + 0.4);
-      ride(end[0], u => CLIMB * u, d);
-      story.T += d;
-    } else if (index > 0) {
-      const told = story.T;
-      // An emblem on the way, drawn while the chapter starts being told.
-      let emblem = 0;
-      if (stop.way && hasShape(stop.way)) {
-        const sh = shapeOf(stop.way);
-        story.T += story.add('A', u => [110 * u, 0], { speed: 180 });
-        const [sx, sy] = [A.x, A.y];
-        const d = story.add('A', strokes([sh.outline]), { speed: 210 });
-        ride(sh.outline.at(-1)?.[0] ?? 0, () => 0, d);
-        emblem = Math.max(d, details(story, 'D', sh.details, sx, sy, d));
-        washes(story, sh, sx, sy, emblem);
-        story.T += emblem;
-      }
-      // Connector: longer and calmer across a gap in the CV.
-      const gap = Math.max(0, from - (prevEnd ?? from));
-      const speed = gap > 2 ? 150 : 210;
-      const len = Math.max(
-        170 + Math.min(gap, 12) * 30,
-        stop.chapter ? (CHAPTER_TIME - emblem) * speed : 0,
-        stop.signpost ? SIGNPOST_TIME * speed : 0,
-      );
-      const wave = gap > 2 || stop.chapter ? 7 : 0;
-      const dy = (u: number) => CLIMB * ease(u) + wave * Math.sin(u * TAU * 2) * (1 - u);
-      const [x0, y0] = [A.x, A.y];
-      const d = story.add('A', u => [len * u, dy(u)], { speed });
-      const last = stops[index - 1];
-      if (stop.signpost && last) signpost(story, x0 + len / 2, y0 + dy(0.5), last.place, stop.place, d);
-      if (stop.chapter) story.caption(stop.chapter, told, story.T - told + d + 0.4);
-      if (rideUntil !== null && from >= rideUntil) {
-        // Training is over: the gold thread rejoins the line and fades.
-        story.add('C', u => [len * u, dy(u) - RIDE * ease(u)], { a: u => 1 - ease(u) * 0.9, dur: d, raw: true });
-        rideUntil = null;
-      } else {
-        ride(len, dy, d);
-      }
-      story.T += d;
-    }
-
-    const t0 = story.T;
-    const x = A.x;
-    const y = A.y;
-    const t = Math.min(1, index / (stops.length - 1));
-    const root = [60, 62, 64, 65, 67, 69, 71, 72][index % 8] ?? 60;
-    story.cue({
-      dur: 3,
-      gap: 0.2,
-      kind: 'chord',
-      notes: [root, root + 7, root + 12 + Math.round(t * 4)],
-      t: t0 + 0.1,
-      vel: 0.09,
-    });
-
-    const shapes: ShapeMark[] = [];
-    const places = (stop.remoteFrom ?? []).filter((p): p is Text => p !== 'on-site');
-    const training = stop.kind === 'training';
-
-    // Working from several places: a map pin for each, its town written above it.
-    if (places.length > 0) {
-      const width = places.length * PIN_GAP;
-      const { path, tops } = pins(places.length, width);
-      const [x0, y0] = [A.x, A.y];
-      const d = story.add('A', strokes([path]), { speed: 230 });
-      places.forEach((place, i) => {
-        const x = x0 + (width * (i + 0.5)) / places.length;
-        const t = story.T + (tops[i] ?? 0) * d;
-        story.blot(x, y0 - 30, 60, 'red', t, 0.6);
-        story.add('D', u => [x + 4 * Math.cos(TAU * u), y0 - 30 + 4 * Math.sin(TAU * u)], {
-          abs: true,
-          dur: 0.2,
-          raw: true,
-          t0: t,
-        });
-        story.label({ side: 'above', t, text: town(place), x, y: y0 - 48 });
-      });
-      ride(width, () => 0, d);
-      story.T += d;
-    }
-
-    for (const key of stop.motifs) {
-      if (key === 'apprentices') {
-        story.T += apprentices(story);
-        continue;
-      }
-      if (!hasShape(key)) continue;
-      const sh = shapeOf(key);
-      const startX = A.x;
-      const startY = A.y;
-      const corner = [sh.outline, ...sh.details].flat();
-      shapes.push({
-        t: story.T,
-        x: startX + Math.max(...corner.map(p => p[0])),
-        y: startY + Math.min(...corner.map(p => p[1])),
-      });
-      const exit = sh.outline.at(-1) ?? [0, 0];
-      let d: number;
-      if (training) {
-        C.x = startX;
-        C.y = startY;
-        d = story.add('C', strokes([sh.outline]), { speed: 200 });
-        const width = exit[0];
-        story.add('A', u => [width * u, 0], { dur: d, raw: true });
-        const last = stop.entries[0];
-        rideUntil = last.to ? monthIndex(last.to) : now;
-      } else {
-        d = story.add('A', strokes([sh.outline]), { speed: 210 });
-        ride(exit[0], () => 0, d);
-      }
-      d = Math.max(d, details(story, training ? 'CD' : 'D', sh.details, startX, startY, d));
-      washes(story, sh, startX, startY, d);
-      story.T += d;
-    }
-
-    // Let the reader finish the card: the pen keeps going, slowly.
-    const spent = story.T - t0;
-    const need = readingTime(stop);
-    if (need > spent) {
-      const d = need - spent;
-      const len = 26 * d;
-      story.add('A', u => [len * u, 3 * Math.sin(u * TAU * Math.max(1, Math.round(d / 4)))], { dur: d, raw: true });
-      ride(len, () => 0, d);
-      story.T += d;
-    }
-
-    // The caption stays up until the next stop begins.
-    story.caption(stop.caption, t0 + 0.4, story.T - t0 + 1);
-    marks.push({ endX: A.x, index, month: from, shapes, t0, t1: story.T, x, y });
-    prevEnd = Math.max(prevEnd ?? 0, stopEnd(stop, now));
+/** Builds the whole career as a story: the line runs through every stop, in order, up to `today`. */
+export function buildCareer(stops: readonly CareerStop[], today: YearMonth): Timeline {
+  const story = new Story<ThreadName>(1.05);
+  const ink = story.threads.add(THREAD.Ink, COLOUR.ink, 2.6, 3.1);
+  const gold = story.threads.add(THREAD.Gold, COLOUR.gold, 2.0, 41.3);
+  // Second pens for the lifted strokes of a shape, so the line and the gold thread never break.
+  story.threads.add(THREAD.InkDetail, COLOUR.ink, 1.9, 17.9);
+  story.threads.add(THREAD.GoldDetail, COLOUR.gold, 1.5, 29.2);
+  THREAD.Apprentices.forEach((name, index) => {
+    story.threads.add(name, COLOUR.apprentices[name], 1.2, 60 + index * 13);
   });
+  const build: Build = { gold, ink, rideUntil: null, story, today: month.index(today) };
+  const marks: StopMark[] = [];
 
-  // Horizon: the line goes on, softer, past the last stop.
-  {
-    const D = 7;
-    const x0 = A.x;
-    const y0 = A.y;
-    story.add('A', u => [900 * u, -120 * ease(u)], {
-      a: u => 1 - ease(u) * 0.95,
-      dur: D,
-      raw: true,
-      w: u => 1 - 0.6 * u,
-    });
-    story.blot(x0 + 700, y0 - 160, 1300, 'dawn', story.T + 1, 0.7);
-    story.cue({ dur: 5, gap: 0.45, kind: 'chord', notes: [48, 55, 64, 71, 76], t: story.T + 0.4, vel: 0.08 });
-    story.T += D;
-  }
-  const end = story.T;
-  story.caption({ en: 'Step back.', fr: 'Prendre du recul.' }, end + 1.4, 4.5);
-  story.caption(
-    { en: 'Every job left its shape on the line.', fr: 'Chaque poste a laissé sa forme sur la ligne.' },
-    end + 6.5,
-    Infinity,
-  );
-  story.cue({ dur: 6, gap: 0.22, kind: 'chord', notes: [48, 55, 60, 64, 67, 72], t: end + 1.2, vel: 0.1 });
+  leadIn(build);
+  let previousEnd: number | null = null;
+  stops.forEach((stop, index) => {
+    const startMonth = period.start(stop);
+    const previous = stops[index - 1];
+    if (previous && stop.route) fly(build, stop);
+    else if (previous) connect(build, stop, previous, Math.max(0, startMonth - (previousEnd ?? startMonth)));
+    marks.push(drawStop(build, stop, index, stops.length, startMonth));
+    previousEnd = Math.max(previousEnd ?? 0, period.end(stop, build.today));
+  });
+  horizon(build);
+  const end = story.time;
+  ending(build, end);
   story.finish();
-  return { end, stops: marks, story, today: now };
+  return { end, stops: marks, story, today: build.today };
 }
 
-/**
- * The month the pen has reached at time t: a stop holds its start month, matching its card,
- * and the months roll by along the connector to the next stop, then on to today.
- */
-export function monthAt({ stops, end, today }: Timeline, t: number): number {
-  const first = stops[0];
-  if (!first || t <= first.t0) return first?.month ?? today;
-  for (let i = 0; i < stops.length; i++) {
-    const m = stops[i] as StopMark;
-    const next = stops[i + 1];
-    const [t1, to] = next ? [next.t0, next.month] : [end, today];
-    if (t < m.t1) return m.month;
-    if (t < t1) return m.month + (to - m.month) * ((t - m.t1) / (t1 - m.t1));
+/** While training lasts, the gold thread runs under whatever the ink line draws. */
+function ride(build: Build, width: number, rise: (progress: number) => number, duration: number): void {
+  if (build.rideUntil === null) return;
+  build.story.add(THREAD.Gold, progress => [width * progress, rise(progress)], { duration, raw: true });
+}
+
+/** The line sets off, thin at first, as the career is announced. */
+function leadIn({ story }: Build): void {
+  story.captions.add({ duration: 4.2, text: CAREER_CAPTIONS.opening, time: 0.6 });
+  story.time = 0.9;
+  story.cues.add({ duration: 4, gap: 0.4, kind: 'Chord', notes: [48, 55], time: 1, velocity: 0.1 });
+  story.time += story.add(THREAD.Ink, progress => [620 * progress, 0], {
+    speed: 140,
+    width: progress => 0.2 + 0.8 * Math.min(1, progress * 5),
+  });
+}
+
+/** To a stop far away, the line flies from place to place over a map, its tip a plane. */
+function fly(build: Build, stop: CareerStop): void {
+  const { story, ink } = build;
+  const route = stop.route ?? [];
+  const start = { x: ink.x, y: ink.y };
+  const path = flight(
+    route.map(place => place.at),
+    CLIMB,
+  );
+  const shift = (point: Point) => [start.x + point[0], start.y + point[1]] as const;
+  story.prints.add({
+    land: 'Sage',
+    radius: path.map.radius,
+    rings: path.land.map(ring => ring.map(shift)),
+    sea: 'Sky',
+    time: story.time,
+    x: start.x + path.map.x,
+    y: start.y + path.map.y,
+  });
+  let duration = 0;
+  const arrivals = path.legs.map((leg, index) => {
+    const outer = index === 0 || index === path.legs.length - 1;
+    duration += story.add(THREAD.Ink, poly(leg.map(shift)), {
+      absolute: true,
+      speed: outer ? 260 : 190,
+      start: story.time + duration,
+    });
+    return story.time + duration;
+  });
+  route.forEach((place, index) => {
+    const [x, y] = shift(path.places[index] ?? [0, 0]);
+    const time = arrivals[index] ?? story.time;
+    // A dot where the line reaches the place, drawn before it reaches the next one, then its name.
+    story.add(THREAD.InkDetail, progress => [x + 3.5 * Math.cos(TAU * progress), y + 3.5 * Math.sin(TAU * progress)], {
+      absolute: true,
+      duration: Math.min(0.3, (arrivals[index + 1] ?? Infinity) - time - 0.02),
+      raw: true,
+      start: time,
+    });
+    story.labels.add({ side: place.side, text: place.name, time, x, y });
+  });
+  story.planes.add({
+    end: arrivals[route.length - 1] ?? story.time + duration,
+    pen: THREAD.Ink,
+    start: arrivals[0] ?? story.time,
+  });
+  const landing = path.legs.at(-1)?.at(-1) ?? [0, 0];
+  if (stop.chapter) story.captions.add({ duration: duration + 0.4, text: stop.chapter, time: story.time });
+  ride(build, landing[0], progress => CLIMB * progress, duration);
+  story.time += duration;
+}
+
+/** The stretch of line from the last stop to this one: longer and calmer across a gap in the CV, of `gap` months. */
+function connect(build: Build, stop: CareerStop, previous: CareerStop, gap: number): void {
+  const { story, ink } = build;
+  const told = story.time;
+  // An emblem on the way, drawn while the chapter starts being told.
+  let emblem = 0;
+  if (stop.way) {
+    const way = shape.of(stop.way);
+    story.time += story.add(THREAD.Ink, progress => [110 * progress, 0], { speed: 180 });
+    const [x, y] = [ink.x, ink.y];
+    const duration = story.add(THREAD.Ink, strokes([way.outline]), { speed: 210 });
+    ride(build, exit(way), () => 0, duration);
+    emblem = Math.max(duration, details(story, THREAD.InkDetail, way.details, x, y, duration));
+    washes(story, way, x, y, emblem);
+    story.time += emblem;
   }
-  return today;
+  const speed = gap > 2 ? 150 : 210;
+  const length = Math.max(
+    170 + Math.min(gap, 12) * 30,
+    stop.chapter ? (TIME.chapter - emblem) * speed : 0,
+    stop.signpost ? TIME.signpost * speed : 0,
+  );
+  const wave = gap > 2 || stop.chapter ? 7 : 0;
+  const rise = (progress: number) =>
+    CLIMB * ease.inOut(progress) + wave * Math.sin(progress * TAU * 2) * (1 - progress);
+  const [x, y] = [ink.x, ink.y];
+  const duration = story.add(THREAD.Ink, progress => [length * progress, rise(progress)], { speed });
+  if (stop.signpost) signpost(story, x + length / 2, y + rise(0.5), previous.place, stop.place, duration);
+  if (stop.chapter)
+    story.captions.add({ duration: story.time - told + duration + 0.4, text: stop.chapter, time: told });
+  if (build.rideUntil !== null && period.start(stop) >= build.rideUntil) {
+    // Training is over: the gold thread rejoins the line and fades.
+    story.add(THREAD.Gold, progress => [length * progress, rise(progress) - RIDE * ease.inOut(progress)], {
+      alpha: progress => 1 - ease.inOut(progress) * 0.9,
+      duration,
+      raw: true,
+    });
+    build.rideUntil = null;
+  } else {
+    ride(build, length, rise, duration);
+  }
+  story.time += duration;
+}
+
+/** Draws a stop: its chord, its map pins, its shapes, and the line lingering while its card is read. */
+function drawStop(build: Build, stop: CareerStop, index: number, count: number, startMonth: number): StopMark {
+  const { story, ink } = build;
+  const start = { time: story.time, x: ink.x };
+  const y = ink.y;
+  const root = [60, 62, 64, 65, 67, 69, 71, 72][index % 8] ?? 60;
+  story.cues.add({
+    duration: 3,
+    gap: 0.2,
+    kind: 'Chord',
+    notes: [root, root + 7, root + 12 + Math.round(Math.min(1, index / (count - 1)) * 4)],
+    time: start.time + 0.1,
+    velocity: 0.09,
+  });
+
+  const places = (stop.remoteFrom ?? []).filter((place): place is Text => place !== 'OnSite');
+  if (places.length > 0) pinPlaces(build, places);
+  const shapes: ShapeMark[] = [];
+  for (const key of stop.motifs) {
+    if (key === 'Apprentices') story.time += apprentices(story);
+    else shapes.push(drawShape(build, shape.of(key), stop));
+  }
+  linger(build, stop, start.time);
+
+  // The caption stays up while the stop is drawn, and a moment after.
+  story.captions.add({ duration: story.time - start.time + 1, text: stop.caption, time: start.time + 0.4 });
+  return { end: { time: story.time, x: ink.x }, index, month: startMonth, shapes, start, y };
+}
+
+/** Working from several places: the line rises into a map pin for each, its town written above it. */
+function pinPlaces(build: Build, places: readonly Text[]): void {
+  const { story, ink } = build;
+  const width = places.length * PIN_GAP;
+  const { path, tops } = pins(places.length, width);
+  const [startX, y] = [ink.x, ink.y];
+  const duration = story.add(THREAD.Ink, strokes([path]), { speed: 230 });
+  places.forEach((place, index) => {
+    const x = startX + (width * (index + 0.5)) / places.length;
+    const time = story.time + (tops[index] ?? 0) * duration;
+    story.blots.add({ alpha: 0.6, pigment: 'Red', size: 60, time, x, y: y - 30 });
+    story.add(THREAD.InkDetail, progress => [x + 4 * Math.cos(TAU * progress), y - 30 + 4 * Math.sin(TAU * progress)], {
+      absolute: true,
+      duration: 0.2,
+      raw: true,
+      start: time,
+    });
+    story.labels.add({ side: 'Above', text: town(place), time, x, y: y - 48 });
+  });
+  ride(build, width, () => 0, duration);
+  story.time += duration;
+}
+
+/** Draws a shape on the line: by the gold thread for a training, which then rides under the line until it ends. */
+function drawShape(build: Build, drawn: Shape, stop: CareerStop): ShapeMark {
+  const { story, ink, gold } = build;
+  const [x, y] = [ink.x, ink.y];
+  const corner = [drawn.outline, ...drawn.details].flat();
+  const mark = {
+    time: story.time,
+    x: x + Math.max(...corner.map(point => point[0])),
+    y: y + Math.min(...corner.map(point => point[1])),
+  };
+  const training = stop.kind === 'Training';
+  let duration: number;
+  if (training) {
+    gold.x = x;
+    gold.y = y;
+    duration = story.add(THREAD.Gold, strokes([drawn.outline]), { speed: 200 });
+    const width = exit(drawn);
+    story.add(THREAD.Ink, progress => [width * progress, 0], { duration, raw: true });
+    const last = stop.entries[0];
+    build.rideUntil = last.to ? month.index(last.to) : build.today;
+  } else {
+    duration = story.add(THREAD.Ink, strokes([drawn.outline]), { speed: 210 });
+    ride(build, exit(drawn), () => 0, duration);
+  }
+  duration = Math.max(
+    duration,
+    details(story, training ? THREAD.GoldDetail : THREAD.InkDetail, drawn.details, x, y, duration),
+  );
+  washes(story, drawn, x, y, duration);
+  story.time += duration;
+  return mark;
+}
+
+/** Lets the reader finish the card: the pen keeps going, slowly. */
+function linger(build: Build, stop: CareerStop, start: number): void {
+  const { story } = build;
+  const spent = story.time - start;
+  const needed = readingTime(stop);
+  if (needed <= spent) return;
+  const duration = needed - spent;
+  const length = 26 * duration;
+  story.add(
+    THREAD.Ink,
+    progress => [length * progress, 3 * Math.sin(progress * TAU * Math.max(1, Math.round(duration / 4)))],
+    { duration, raw: true },
+  );
+  ride(build, length, () => 0, duration);
+  story.time += duration;
+}
+
+/** The line goes on, softer, past the last stop. */
+function horizon({ story, ink }: Build): void {
+  const duration = 7;
+  const [x, y] = [ink.x, ink.y];
+  story.add(THREAD.Ink, progress => [900 * progress, -120 * ease.inOut(progress)], {
+    alpha: progress => 1 - ease.inOut(progress) * 0.95,
+    duration,
+    raw: true,
+    width: progress => 1 - 0.6 * progress,
+  });
+  story.blots.add({ alpha: 0.7, pigment: 'Dawn', size: 1300, time: story.time + 1, x: x + 700, y: y - 160 });
+  story.cues.add({
+    duration: 5,
+    gap: 0.45,
+    kind: 'Chord',
+    notes: [48, 55, 64, 71, 76],
+    time: story.time + 0.4,
+    velocity: 0.08,
+  });
+  story.time += duration;
+}
+
+/** Once the line is drawn, the camera steps back over the whole career. */
+function ending({ story }: Build, end: number): void {
+  story.captions.add({ duration: 4.5, text: CAREER_CAPTIONS.stepBack, time: end + 1.4 });
+  story.captions.add({ duration: Infinity, text: CAREER_CAPTIONS.overview, time: end + 6.5 });
+  story.cues.add({
+    duration: 6,
+    gap: 0.22,
+    kind: 'Chord',
+    notes: [48, 55, 60, 64, 67, 72],
+    time: end + 1.2,
+    velocity: 0.1,
+  });
+}
+
+/** How far along the line a shape's outline ends. */
+const exit = (drawn: Shape): number => drawn.outline.at(-1)?.[0] ?? 0;
+
+/**
+ * Map pins, one per place worked from: the line rises into each pin and comes back down to its point. Returns the path, `width` long, and how far along its length the pen reaches the top of each pin.
+ */
+function pins(count: number, width: number): Readonly<{ path: readonly Point[]; tops: readonly number[] }> {
+  const [height, radius] = [30, 11];
+  // Where the sides of the pin meet its head, measured from straight down.
+  const sideAngle = Math.acos(radius / height);
+  const startAngle = Math.atan2(Math.cos(sideAngle), Math.sin(sideAngle));
+  const path: Point[] = [[0, 0]];
+  const tops: number[] = [];
+  let length = 0;
+  const extend = (point: Point) => {
+    const last = path[path.length - 1] ?? point;
+    length += Math.hypot(point[0] - last[0], point[1] - last[1]);
+    path.push(point);
+  };
+  for (let index = 0; index < count; index++) {
+    const x = (width * (index + 0.5)) / count;
+    extend([x, 0]);
+    // Up the right side, over the head, down the left side.
+    const sweep = TAU - (Math.PI - 2 * startAngle);
+    for (let step = 0; step <= 20; step++) {
+      const angle = startAngle - (sweep * step) / 20;
+      extend([x + radius * Math.cos(angle), -height + radius * Math.sin(angle)]);
+      if (step === 10) tops.push(length);
+    }
+    extend([x, 0]);
+  }
+  extend([width, 0]);
+  return { path, tops: tops.map(top => top / length) };
 }
 
 /** The town of a place written "Town, Country". */
@@ -353,61 +427,74 @@ const town = (place: Text): Text => ({
 });
 
 /** Lays a shape's watercolour wash halfway through drawing it, and its small coloured spots once it is done. */
-function washes(story: Story, sh: Shape, x: number, y: number, dur: number): void {
-  story.blot(x + sh.wash[0], y + sh.wash[1], sh.wash[2] * 1.3, sh.pigment, story.T + dur * 0.5, 0.55);
-  for (const [sx, sy, size, pigment] of sh.spots ?? []) story.blot(x + sx, y + sy, size, pigment, story.T + dur, 0.8);
+function washes(story: Story<ThreadName>, drawn: Shape, x: number, y: number, duration: number): void {
+  story.blots.add({
+    alpha: 0.55,
+    pigment: drawn.pigment,
+    size: drawn.wash[2] * 1.3,
+    time: story.time + duration * 0.5,
+    x: x + drawn.wash[0],
+    y: y + drawn.wash[1],
+  });
+  for (const [spotX, spotY, size, pigment] of drawn.spots ?? [])
+    story.blots.add({ alpha: 0.8, pigment, size, time: story.time + duration, x: x + spotX, y: y + spotY });
 }
 
 /**
- * Draws a shape's lifted strokes with a second pen, setting off while the outline is still being drawn and
- * finishing about when it does, however dense the details. Returns when they end, from the start of the shape.
+ * Draws a shape's lifted strokes with a second pen, setting off while the outline is still being drawn and finishing about when it does, however dense the details. Returns when they end, from the start of the shape.
  */
-function details(story: Story, pen: string, list: readonly Stroke[], x: number, y: number, outlineDur: number): number {
+function details(
+  story: Story<ThreadName>,
+  pen: ThreadName,
+  list: readonly Stroke[],
+  x: number,
+  y: number,
+  outlineDuration: number,
+): number {
   if (!list.length) return 0;
-  const th = story.get(pen);
-  th.x = x;
-  th.y = y;
-  const lag = outlineDur * DETAIL_LAG;
-  const dur = Math.min(inkLength(list) / DETAIL_SPEED, Math.max(outlineDur * (1 - DETAIL_LAG), 2.5));
-  story.add(pen, strokes(list), { dur, t0: story.T + lag });
-  return lag + dur;
+  const thread = story.threads.get(pen);
+  thread.x = x;
+  thread.y = y;
+  const lag = outlineDuration * DETAIL.lag;
+  const duration = Math.min(inkLength(list) / DETAIL.speed, Math.max(outlineDuration * (1 - DETAIL.lag), 2.5));
+  story.add(pen, strokes(list), { duration, start: story.time + lag });
+  return lag + duration;
 }
 
 /**
- * A short trip: a signpost standing on the line, one board pointing back to where the line comes from, the other
- * ahead to where it goes, drawn by the detail pen as the line passes it.
+ * A short trip: a signpost standing on the line, one board pointing back to where the line comes from, the other ahead to where it goes, drawn by the detail pen as the line passes it.
  */
-function signpost(story: Story, x: number, y: number, from: Text, to: Text, dur: number): void {
-  // A board from x0 to x1, its pointed end on the side it points to, centred at height cy.
-  const board = (x0: number, x1: number, cy: number, left: boolean): Stroke => {
-    const [h, tip] = [12, 14];
+function signpost(story: Story<ThreadName>, x: number, y: number, from: Text, to: Text, duration: number): void {
+  // A board from `start` to `end`, its pointed end on the side it points to, centred at height `middle`.
+  const board = (start: number, end: number, middle: number, left: boolean): Stroke => {
+    const [height, point] = [12, 14];
     return left
       ? [
-          [x0, cy],
-          [x0 + tip, cy - h],
-          [x1, cy - h],
-          [x1, cy + h],
-          [x0 + tip, cy + h],
-          [x0, cy],
+          [start, middle],
+          [start + point, middle - height],
+          [end, middle - height],
+          [end, middle + height],
+          [start + point, middle + height],
+          [start, middle],
         ]
       : [
-          [x1, cy],
-          [x1 - tip, cy - h],
-          [x0, cy - h],
-          [x0, cy + h],
-          [x1 - tip, cy + h],
-          [x1, cy],
+          [end, middle],
+          [end - point, middle - height],
+          [start, middle - height],
+          [start, middle + height],
+          [end - point, middle + height],
+          [end, middle],
         ];
   };
   // The post, two lines, hidden behind the boards.
-  const post = ([y0, y1]: readonly [number, number]): Stroke[] => [
+  const post = ([bottom, top]: readonly [number, number]): Stroke[] => [
     [
-      [-3, y0],
-      [-3, y1],
+      [-3, bottom],
+      [-3, top],
     ],
     [
-      [3, y1],
-      [3, y0],
+      [3, top],
+      [3, bottom],
     ],
   ];
   const list: Stroke[] = [
@@ -420,36 +507,61 @@ function signpost(story: Story, x: number, y: number, from: Text, to: Text, dur:
     ).flatMap(post),
     board(-82, 34, -108, true),
     board(-34, 82, -72, false),
-  ].map(s => s.map(([px, py]) => [x + px, y + py] as const));
-  const t0 = story.T + dur * 0.15;
-  const draw = Math.min(2.2, dur * 0.5);
-  story.add('D', strokes(list), { abs: true, dur: draw, t0 });
-  story.blot(x, y - 90, 200, 'ochre', t0 + draw * 0.6, 0.5);
-  story.label({ side: 'centre', t: t0 + draw * 0.75, text: from, x: x - 36, y: y - 108 });
-  story.label({ side: 'centre', t: t0 + draw, text: to, x: x + 36, y: y - 72 });
+  ].map(stroke => stroke.map(([pointX, pointY]) => [x + pointX, y + pointY] as const));
+  const start = story.time + duration * 0.15;
+  const drawing = Math.min(2.2, duration * 0.5);
+  story.add(THREAD.InkDetail, strokes(list), { absolute: true, duration: drawing, start });
+  story.blots.add({ alpha: 0.5, pigment: 'Ochre', size: 200, time: start + drawing * 0.6, x, y: y - 90 });
+  story.labels.add({ side: 'Centre', text: from, time: start + drawing * 0.75, x: x - 36, y: y - 108 });
+  story.labels.add({ side: 'Centre', text: to, time: start + drawing, x: x + 36, y: y - 72 });
 }
 
 /** Teaching: the line carries on while apprentice threads branch off it and go their own way. */
-function apprentices(story: Story): number {
-  const A = story.get('A');
-  const L = 1100;
-  const x0 = A.x;
-  const y0 = A.y;
-  const wave = (f: number) => -10 * Math.sin(f * TAU * 1.5);
-  const D = story.add('A', u => [L * u, wave(u)], { speed: 170 });
-  [0.12, 0.32, 0.52].forEach((f, k) => {
-    const P = story.get(`P${k}`);
-    P.x = x0 + L * f;
-    P.y = y0 + wave(f);
-    const len = L * (1 - f) * 1.05;
-    const lift = 50 + 34 * k;
+function apprentices(story: Story<ThreadName>): number {
+  const ink = story.threads.get(THREAD.Ink);
+  const length = 1100;
+  const [x, y] = [ink.x, ink.y];
+  const wave = (position: number) => -10 * Math.sin(position * TAU * 1.5);
+  const duration = story.add(THREAD.Ink, progress => [length * progress, wave(progress)], { speed: 170 });
+  THREAD.Apprentices.forEach((name, index) => {
+    const position = [0.12, 0.32, 0.52][index] ?? 0;
+    const apprentice = story.threads.get(name);
+    apprentice.x = x + length * position;
+    apprentice.y = y + wave(position);
+    const reach = length * (1 - position) * 1.05;
+    const lift = 50 + 34 * index;
     story.add(
-      `P${k}`,
-      u => [len * u, -lift * ease(Math.min(1, u * 2.2)) + 8 * Math.sin(u * TAU * 2) - wave(f) + wave(f + (1 - f) * u)],
-      { a: u => 1 - ease(u) * 0.8, dur: (1 - f) * D, raw: true, t0: story.T + f * D, w: u => Math.min(1, 0.2 + u * 6) },
+      name,
+      progress => [
+        reach * progress,
+        -lift * ease.inOut(Math.min(1, progress * 2.2)) +
+          8 * Math.sin(progress * TAU * 2) -
+          wave(position) +
+          wave(position + (1 - position) * progress),
+      ],
+      {
+        alpha: progress => 1 - ease.inOut(progress) * 0.8,
+        duration: (1 - position) * duration,
+        raw: true,
+        start: story.time + position * duration,
+        width: progress => Math.min(1, 0.2 + progress * 6),
+      },
     );
-    story.cue({ dur: 2, kind: 'note', note: [79, 83, 86][k] ?? 79, t: story.T + f * D, vel: 0.07 });
+    story.cues.add({
+      duration: 2,
+      kind: 'Note',
+      note: [79, 83, 86][index] ?? 79,
+      time: story.time + position * duration,
+      velocity: 0.07,
+    });
   });
-  story.blot(x0 + L * 0.55, y0 - 90, 900, 'dawn', story.T + D * 0.4, 0.7);
-  return D;
+  story.blots.add({
+    alpha: 0.7,
+    pigment: 'Dawn',
+    size: 900,
+    time: story.time + duration * 0.4,
+    x: x + length * 0.55,
+    y: y - 90,
+  });
+  return duration;
 }
