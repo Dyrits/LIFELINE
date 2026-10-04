@@ -76,6 +76,8 @@ export type CareerStop = Readonly<{
   way?: ShapeKey;
   /** A short trip: the stretch of line leading to this stop passes a signpost, the last place to the left, this one to the right. */
   signpost?: boolean;
+  /** A shape printed behind the start of the stop, larger than life, which the line walks through instead of drawing it. */
+  backdrop?: ShapeKey;
   /** Each entry gets its own card: the first below the line, the others beside the shape with the same index. */
   split?: boolean;
   remoteFrom?: readonly RemotePlace[];

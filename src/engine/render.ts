@@ -8,8 +8,9 @@ import {
   type InkPoint,
   type Label,
   labelAlpha,
+  type MapPrint,
+  type PicturePrint,
   type Plane,
-  type Print,
   type Story,
   type Thread,
 } from './story';
@@ -139,7 +140,9 @@ export class Renderer {
       context.restore();
     }
     this.draw.blots(story.blots.items, camera, time);
-    for (const print of story.prints.items) this.draw.print(print, camera, time);
+    for (const print of story.prints.items)
+      if (print.kind === 'Map') this.draw.map(print, camera, time);
+      else this.draw.picture(print, camera, time);
     context.lineCap = 'round';
     context.lineJoin = 'round';
     for (const name of order) {
@@ -195,43 +198,8 @@ export class Renderer {
       context.globalAlpha = 1;
     },
 
-    /** A small plane seen from above, nose towards `heading`, in the colour already set. */
-    plane: (x: number, y: number, heading: number, alpha: number): void => {
-      const { context } = this;
-      const size = Math.max(0.6, this.scale);
-      context.save();
-      context.translate(x, y);
-      context.rotate(heading);
-      context.scale(size, size);
-      context.globalAlpha = alpha;
-      context.fillStyle = context.strokeStyle;
-      const half: Point[] = [
-        [15, 0],
-        [12, -2],
-        [3, -2.2],
-        [-4, -14],
-        [-8, -14],
-        [-4, -2.2],
-        [-11, -2],
-        [-15, -7],
-        [-17.5, -7],
-        [-15, 0],
-      ];
-      context.beginPath();
-      trace(context, [
-        ...half,
-        ...half
-          .slice(0, -1)
-          .reverse()
-          .map(([pointX, pointY]) => [pointX, -pointY] as const),
-      ]);
-      context.closePath();
-      context.fill();
-      context.restore();
-    },
-
     /** A printed map: land washed and outlined, fading in, and fading out towards its edge so it has no border. */
-    print: (print: Print, camera: Camera, time: number): void => {
+    map: (print: MapPrint, camera: Camera, time: number): void => {
       const { context, scale, width, height } = this;
       if (time <= print.time) return;
       const [x, y] = this.toScreen(camera, print.x, print.y);
@@ -267,6 +235,76 @@ export class Renderer {
       context.lineJoin = 'round';
       context.stroke(land);
       context.globalAlpha = 1;
+    },
+
+    /** A printed picture: its outline washed and every stroke traced faintly, fading in. */
+    picture: (picture: PicturePrint, camera: Camera, time: number): void => {
+      const { context, scale } = this;
+      if (time <= picture.time) return;
+      const onScreen = (stroke: readonly Point[]) =>
+        stroke.map(([pointX, pointY]) => this.toScreen(camera, pointX, pointY));
+      const outline = new Path2D();
+      trace(outline, onScreen(picture.outline));
+      const lines = new Path2D(outline);
+      for (const stroke of picture.strokes) trace(lines, onScreen(stroke));
+      // Fading out from its middle towards its edges, like a map, so it stays in the background.
+      const points = [picture.outline, ...picture.strokes]
+        .flat()
+        .map(([pointX, pointY]) => this.toScreen(camera, pointX, pointY));
+      const [xs, ys] = [points.map(point => point[0]), points.map(point => point[1])];
+      const [centreX, centreY] = [(Math.min(...xs) + Math.max(...xs)) / 2, (Math.min(...ys) + Math.max(...ys)) / 2];
+      const radius = 0.62 * Math.hypot(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys));
+      const fade = (rgb: readonly number[], alpha: number) => {
+        const gradient = context.createRadialGradient(centreX, centreY, radius * 0.3, centreX, centreY, radius);
+        gradient.addColorStop(0, `rgba(${rgb.join(',')},${alpha})`);
+        gradient.addColorStop(1, `rgba(${rgb.join(',')},0)`);
+        return gradient;
+      };
+      context.globalAlpha = ease.out(clamp((time - picture.time) / 1.6, 0, 1));
+      context.globalCompositeOperation = 'multiply';
+      context.fillStyle = fade(PIGMENTS[picture.pigment], 0.34);
+      context.fill(outline);
+      context.globalCompositeOperation = 'source-over';
+      context.strokeStyle = fade([58, 66, 84], 0.5);
+      context.lineWidth = Math.max(0.6, 1.1 * scale);
+      context.lineJoin = 'round';
+      context.stroke(lines);
+      context.globalAlpha = 1;
+    },
+
+    /** A small plane seen from above, nose towards `heading`, in the colour already set. */
+    plane: (x: number, y: number, heading: number, alpha: number): void => {
+      const { context } = this;
+      const size = Math.max(0.6, this.scale);
+      context.save();
+      context.translate(x, y);
+      context.rotate(heading);
+      context.scale(size, size);
+      context.globalAlpha = alpha;
+      context.fillStyle = context.strokeStyle;
+      const half: Point[] = [
+        [15, 0],
+        [12, -2],
+        [3, -2.2],
+        [-4, -14],
+        [-8, -14],
+        [-4, -2.2],
+        [-11, -2],
+        [-15, -7],
+        [-17.5, -7],
+        [-15, 0],
+      ];
+      context.beginPath();
+      trace(context, [
+        ...half,
+        ...half
+          .slice(0, -1)
+          .reverse()
+          .map(([pointX, pointY]) => [pointX, -pointY] as const),
+      ]);
+      context.closePath();
+      context.fill();
+      context.restore();
     },
 
     thread: (thread: Thread, camera: Camera, time: number, plane?: Plane): void => {

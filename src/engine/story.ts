@@ -49,7 +49,8 @@ export type Ring = readonly Point[];
 /**
  * A map printed under the ink, fading in from `time`: land rings washed with `land` and outlined, the sea between them washed with `sea`, all fading out towards the edge of a circle of `radius` around (x, y).
  */
-export type Print = Readonly<{
+export type MapPrint = Readonly<{
+  kind: 'Map';
   rings: readonly Ring[];
   x: number;
   y: number;
@@ -58,6 +59,16 @@ export type Print = Readonly<{
   land: Pigment;
   sea: Pigment;
 }>;
+/** A drawing printed under the ink, fading in from `time`: its closed `outline` filled with `pigment`, then it and the other `strokes` traced faintly. */
+export type PicturePrint = Readonly<{
+  kind: 'Picture';
+  outline: readonly Point[];
+  strokes: readonly (readonly Point[])[];
+  pigment: Pigment;
+  time: number;
+}>;
+/** A background printed under the ink, for the line to run over. */
+export type Print = MapPrint | PicturePrint;
 /** A name written beside (x, y) from `time` until `until`, on the given side, or centred on it. */
 export type Label = Readonly<{
   x: number;

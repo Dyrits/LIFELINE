@@ -54,6 +54,9 @@ export type StopMark = Readonly<{
 /** A career built as a story, with where each stop lies, when the drawing ends and the month it ends on. */
 export type Timeline = Readonly<{ story: Story<ThreadName>; stops: readonly StopMark[]; end: number; today: number }>;
 
+/** How much larger than life a shape is printed behind a stop. */
+const BACKDROP_SCALE = 1.2;
+
 /** Distance under the ink line at which the gold training thread rides. */
 const RIDE = 14;
 /** Each stop starts a little higher: the career climbs. */
@@ -163,6 +166,7 @@ function fly(build: Build, stop: CareerStop): void {
   );
   const shift = (point: Point) => [start.x + point[0], start.y + point[1]] as const;
   story.prints.add({
+    kind: 'Map',
     land: 'Sage',
     radius: path.map.radius,
     rings: path.land.map(ring => ring.map(shift)),
@@ -272,6 +276,7 @@ function drawStop(build: Build, stop: CareerStop, index: number, count: number, 
 
   const places = (stop.remoteFrom ?? []).filter((place): place is Text => place !== 'OnSite');
   if (places.length > 0) pinPlaces(build, places);
+  if (stop.backdrop) backdrop(build, shape.of(stop.backdrop));
   const shapes: ShapeMark[] = [];
   // The shapes of a stop told as one share a single wash, spread under them all; a split stop's jobs keep their own.
   const spread = !stop.split && stop.motifs.filter(key => key !== 'Apprentices').length > 1;
@@ -309,7 +314,6 @@ function drawStop(build: Build, stop: CareerStop, index: number, count: number, 
     });
   }
   linger(build, stop, start.time);
-
   // The caption stays up while the stop is drawn, and a moment after.
   story.captions.add({ duration: story.time - start.time + 1, text: stop.caption, time: start.time + 0.4 });
   return { end: { time: story.time, x: ink.x }, index, month: startMonth, shapes, start, y };
@@ -370,6 +374,25 @@ function drawShape(build: Build, drawn: Shape, stop: CareerStop, wash = true): S
   washes(story, drawn, x, y, duration, wash);
   story.time += duration;
   return mark;
+}
+
+/** Prints a shape behind the line, larger than life, as the line walks along the ground through it. */
+function backdrop(build: Build, drawn: Shape): void {
+  const { story, ink } = build;
+  const [x, y] = [ink.x, ink.y];
+  const place = (stroke: Stroke) =>
+    stroke.map(([pointX, pointY]) => [x + pointX * BACKDROP_SCALE, y + pointY * BACKDROP_SCALE] as const);
+  story.prints.add({
+    kind: 'Picture',
+    outline: place(drawn.outline),
+    pigment: drawn.pigment,
+    strokes: drawn.details.map(place),
+    time: story.time,
+  });
+  const width = exit(drawn) * BACKDROP_SCALE;
+  const duration = story.add(THREAD.Ink, progress => [width * progress, 0], { speed: 210 });
+  ride(build, width, () => 0, duration);
+  story.time += duration;
 }
 
 /** Lets the reader finish the card: the pen keeps going, slowly. */

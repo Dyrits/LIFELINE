@@ -141,6 +141,7 @@ export const CAREER: readonly CareerStop[] = [
     signpost: true,
   },
   {
+    backdrop: 'CandiBentar',
     caption: bilingual(
       'À Bali, je rouvre l’ordinateur. Le code peut voyager avec moi.',
       'In Bali I open the laptop again. Code can travel with me.',
@@ -167,7 +168,7 @@ export const CAREER: readonly CareerStop[] = [
       },
     ],
     kind: 'Job',
-    motifs: ['CandiBentar', 'BrowserGallery'],
+    motifs: ['BrowserGallery'],
     place: bilingual('Ubud', 'Ubud'),
     way: 'Compass',
   },

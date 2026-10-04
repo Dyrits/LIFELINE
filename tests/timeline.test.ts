@@ -143,6 +143,24 @@ describe('career timeline', () => {
     });
   });
 
+  it('prints the gate of Ubud behind the line, which walks through it, and draws only the gallery', () => {
+    const pictures = timeline.story.prints.items.filter(print => print.kind === 'Picture');
+    const ubud = CAREER.findIndex(stop => stop.place.en === 'Ubud');
+    const mark = timeline.stops[ubud];
+    expect(pictures).toHaveLength(1);
+    const [gate] = pictures;
+    if (!mark || gate?.kind !== 'Picture') throw new Error('No gate behind Ubud');
+    expect(gate.time).toBeCloseTo(mark.start.time, 1);
+    expect(mark.shapes).toHaveLength(1);
+    // The line stays on the ground all the way across the gate.
+    const xs = gate.outline.map(point => point[0]);
+    const across = ink(THREAD.Ink).filter(
+      point => point.time >= mark.start.time && point.x >= Math.min(...xs) && point.x <= Math.max(...xs),
+    );
+    expect(across.length).toBeGreaterThan(0);
+    for (const point of across) expect(Math.abs(point.y - mark.y)).toBeLessThan(3);
+  });
+
   it('lasts a few minutes', () => {
     expect(timeline.end).toBeGreaterThan(120);
     expect(timeline.end).toBeLessThan(600);

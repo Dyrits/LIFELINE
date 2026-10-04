@@ -229,6 +229,27 @@ barcode's top; each red before its change).
 Screenshots: the first stop folded, the overview, the compass mid-drawing (the plane round the dial) and drawn
 (letters readable, dashes apart). The needle's red spot barely shows over the blue wash.
 
+## Backgrounds under the line: Ubud's gate (implemented and checked, awaiting user review)
+
+Requested 2026-10-04: Dylan likes the line running over a background, as over the flight map, and wants more
+backgrounds that are not maps. Crop rows under Merredin were tried and rejected ("I don't like it", and they
+overlapped the map). His choice instead: Ubud's candi bentar is no longer drawn by the pen but printed in the
+background. A stop's `backdrop` shape (`src/data/types.ts`) is printed 1.2 times life size as the stop starts
+(`PicturePrint` in `src/engine/story.ts`, `draw.picture` in `src/engine/render.ts`): its outline filled with
+its pigment and its strokes traced faintly, fading in and fading towards its edges, like the map. The line walks
+along the ground through the gate's gap (`backdrop()` in `src/career/build.ts`), then draws the gallery, now
+Ubud's only shape, with its own wash. The map print is now `MapPrint`; both are kinds of `Print`.
+So no stop is drawn with several unsplit shapes any more: the shared wash (section above) applies to none today,
+and its test passes without checking anything.
+
+Evidence: `npm run check` (114 tests; new: the gate of Ubud is printed behind the line, which stays on the ground
+across it, and only the gallery is drawn; red before the change), `npm run e2e` (15 tests).
+Screenshots at 1440x900 (`.agents/scripts/screenshot-career.mjs`): the gate fading in with the card open, the
+gallery drawn beside it, and the overview. At 1.6 times life size the gate ran off the top of the screen.
+
+Other backgrounds offered, none chosen yet: ruled or squared notebook paper under training stops, a street grid
+behind Lyon or Paris, maps for the flight home (Malacca → Bouguenais) and possibly Lima.
+
 ## Notes
 
 - Foldkit skill folders the user added to the workspace are not part of this app and are not committed.
