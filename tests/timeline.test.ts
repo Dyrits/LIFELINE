@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { buildCareer, THREAD } from '../src/career/build';
 import { CAREER } from '../src/data/career';
+import { labelAlpha } from '../src/engine/story';
 import * as month from '../src/month';
 
 const timeline = buildCareer(CAREER, '2026-10');
@@ -95,6 +96,23 @@ describe('career timeline', () => {
       expect(mark.end.x).toBeCloseTo(pen?.x ?? Number.NaN, -1);
       expect(mark.end.x).toBeGreaterThan(mark.start.x);
     }
+  });
+
+  it('writes each place name while the line is drawn, then hides them all from the overview', () => {
+    const labels = timeline.story.labels.items;
+    expect(labels.length).toBeGreaterThan(0);
+    for (const label of labels) {
+      expect(labelAlpha(label, label.time + 1), label.text.en).toBeGreaterThan(0);
+      expect(labelAlpha(label, timeline.end + 3), label.text.en).toBe(0);
+    }
+  });
+
+  it('turns a compass towards Asia on the way there, its points written in each language', () => {
+    const asia = CAREER.findIndex(stop => stop.way === 'Compass');
+    const [arrival, last] = [timeline.stops[asia]?.start.time ?? 0, timeline.stops[asia - 1]?.end.time ?? 0];
+    const written = timeline.story.labels.items.filter(label => label.time > last && label.time < arrival);
+    expect(written.map(label => label.text.fr).sort()).toEqual(['E', 'N', 'O', 'S']);
+    expect(written.map(label => label.text.en).sort()).toEqual(['E', 'N', 'S', 'W']);
   });
 
   it('lasts a few minutes', () => {

@@ -196,6 +196,36 @@ Open from the review, not refactors (behaviour or content; need red/green or Dyl
 - Paper textures come back blank instead of throwing when the browser refuses a canvas: kept as it was, though
   `GUIDELINES.md` lists an unavailable canvas under "throw"; the rule needs Dylan to say which case wins.
 
+## Overview without place names (implemented and checked, awaiting user review)
+
+Reported 2026-10-04: in the final overview the town names (pins, flight map, signposts) piled up over the line.
+Every label now fades out over 0.8 s once the camera steps back (`until` set in `ending()`, `labelAlpha` in
+`src/engine/story.ts`); scrolling back before the end brings them back.
+
+Evidence: `npm run check` (109 tests; new: each place name shows while drawn and none in the overview, red before
+the fix on "Geneva"), `npm run e2e` (13 tests). Screenshots at 1440x900 of the overview before and after, and of
+the last stop with its "Saint-Herblain" label. Seen there, not fixed: the last stop's card runs behind its caption.
+
+## RGIS tag and compass (implemented and checked, awaiting user review)
+
+Requested 2026-10-04:
+- A split stop's later entries fold into their own tag by their shape's top-right corner, where their card stood
+  ("2011 · RGIS" beside the top of the barcode; in the overview it joins the other tags under the line), and each
+  tag reopens only its own card. This replaces batch 3's "side cards have no overview tag".
+  Overview tags alternate rows in card order, so both 2011 tags stack and 2013 moves to the top row.
+- The backpack on the way to Ubud is replaced by a compass (`Compass` in `src/career/motifs.ts`; Dylan turned down
+  the passport, then chose the compass over a map, a globe or the plain line, wanting illustrations other than maps):
+  the line draws the dial resting on the line, the detail pen its ticks, a needle pointing north-west (red spot on
+  its north half) and a dashed sweep from south round towards it. Its points are written N, E, S, O in French and
+  N, E, S, W in English. Shapes can now carry `words`, written as labels once the details are drawn. The chapter
+  line now reads "Vers l’Asie, sac au dos." (Dylan's wording) / "Off to Asia, backpack on."
+
+Evidence: `npm run check` (110 tests; new: the compass on the way to Ubud writes its points in each language), `npm run e2e`
+(15 tests; new: the RGIS card folds into its own tag, which reopens only it, and that tag stays up by the
+barcode's top; each red before its change).
+Screenshots: the first stop folded, the overview, the compass mid-drawing and drawn (letters readable, dashes
+apart). The needle's red spot barely shows over the blue wash.
+
 ## Notes
 
 - Foldkit skill folders the user added to the workspace are not part of this app and are not committed.

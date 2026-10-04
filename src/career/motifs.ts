@@ -1,4 +1,4 @@
-import type { ShapeKey } from '../data/types';
+import { bilingual, type ShapeKey, type Text } from '../data/types';
 import { type Point, TAU } from '../engine/math';
 import type { Pigment } from '../engine/pigment';
 
@@ -17,6 +17,8 @@ export type Shape = Readonly<{
   wash: readonly [x: number, y: number, size: number];
   /** Small washes of another colour over parts of the shape, laid as the details finish. */
   spots?: readonly (readonly [x: number, y: number, size: number, pigment: Pigment])[];
+  /** Words written on the shape, centred on (x, y), once its details are drawn. */
+  words?: readonly (readonly [x: number, y: number, text: Text])[];
 }>;
 
 /** Points around a circle; angles in radians, y downwards (so -π/2 is the top). */
@@ -175,111 +177,6 @@ const SHAPES: Record<ShapeKey, () => Shape> = {
         [131, -89, 70, 'Red'],
         [211, -164, 60, 'Sky'],
       ],
-    };
-  },
-
-  // Backpacking: a big backpack standing on the line, a sleeping mat rolled on top.
-  Backpack: () => {
-    // The top of the pack: a flattened arch over its two sides.
-    const top = arc(130, -150, 74, Math.PI, TAU, 20).map(([x, y]) => [x, -150 + (y + 150) * 0.55] as const);
-    const mat = (x: number): Stroke =>
-      circle(x, -218, 13, 12).map(([pointX, pointY]) => [x + (pointX - x) * 0.45, pointY] as const);
-    return {
-      ...define(
-        [[0, 0], [56, 0], [56, -150], ...top, [204, -150], [204, 0], [260, 0]],
-        [
-          // Where the pack rests, under the line that went over it.
-          [
-            [56, 0],
-            [204, 0],
-          ],
-          // Shoulder strap showing at the side.
-          smooth([
-            [60, -168],
-            [42, -128],
-            [42, -70],
-            [56, -40],
-          ]),
-          // Top flap, and two straps down the front with their buckles.
-          smooth([
-            [57, -134],
-            [94, -110],
-            [130, -104],
-            [166, -110],
-            [203, -134],
-          ]),
-          // Front pocket, squared, with its zip.
-          smooth(
-            [
-              [76, -72],
-              [184, -72],
-              [184, -12],
-              [76, -12],
-              [76, -72],
-            ],
-            1,
-          ),
-          [
-            [82, -62],
-            [178, -62],
-          ],
-          // Two straps down the whole front, buckled over the pocket.
-          ...[100, 160].flatMap((x): Stroke[] => [
-            [
-              [x, -108],
-              [x, -4],
-            ],
-            rect(x - 6, -36, 12, 9),
-          ]),
-          // A bottle in the side pocket.
-          [
-            [204, -70],
-            [214, -72],
-            [216, -112],
-            [210, -120],
-            [210, -128],
-            [204, -128],
-          ],
-          [
-            [204, -40],
-            [218, -44],
-            [216, -78],
-            [204, -78],
-          ],
-          // Compression straps on the sides.
-          [
-            [56, -100],
-            [70, -94],
-          ],
-          [
-            [204, -100],
-            [190, -94],
-          ],
-          // Sleeping mat, rolled and tied on top.
-          mat(70),
-          [
-            [70, -231],
-            [190, -231],
-          ],
-          [
-            [70, -205],
-            [190, -205],
-          ],
-          mat(190),
-          circle(70, -218, 5, 8).map(([pointX, pointY]) => [70 + (pointX - 70) * 0.45, pointY] as const),
-          [
-            [98, -233],
-            [98, -186],
-          ],
-          [
-            [162, -233],
-            [162, -186],
-          ],
-        ],
-        'Blue',
-        [130, -110, 440],
-      ),
-      spots: [[130, -218, 80, 'Sun']],
     };
   },
 
@@ -794,6 +691,54 @@ const SHAPES: Record<ShapeKey, () => Shape> = {
       'Sky',
       [160, -100, 480],
     ),
+
+  // Heading for Asia: a compass resting on the line, its needle turned from south to north-west.
+  Compass: () => {
+    const [x, y, radius] = [150, -90, 90];
+    // Angles on screen, y downwards: south is π/2, north-west 5π/4.
+    const [south, northWest] = [Math.PI / 2, (5 * Math.PI) / 4];
+    const needle = (length: number, angle: number): Point => polar(x, y, length, angle);
+    const ticks = Array.from({ length: 16 }, (_, index): Stroke => {
+      const angle = (index * TAU) / 16;
+      return [polar(x, y, index % 4 ? 80 : 72, angle), polar(x, y, 86, angle)];
+    });
+    // The needle's sweep, dashed, from south round to just short of its north end, then an arrowhead along it.
+    const sweep = Array.from({ length: 4 }, (_, index): Stroke => {
+      const from = south + 0.4 + index * 0.38;
+      return arc(x, y, 52, from, from + 0.16, 4);
+    });
+    const end = polar(x, y, 52, south + 0.4 + 3 * 0.38 + 0.16);
+    const heading = south + 0.4 + 3 * 0.38 + 0.16 + Math.PI / 2;
+    return {
+      ...define(
+        [[0, 0], [x, 0], ...arc(x, y, radius, south, south + TAU, 40).slice(1), [x, 0], [300, 0]],
+        [
+          ...ticks,
+          // The needle: a long diamond, its north half split down the middle.
+          [
+            needle(62, northWest),
+            needle(9, northWest + Math.PI / 2),
+            needle(62, northWest + Math.PI),
+            needle(9, northWest - Math.PI / 2),
+            needle(62, northWest),
+          ],
+          [needle(62, northWest), needle(0, 0)],
+          circle(x, y, 5, 10),
+          ...sweep,
+          [polar(end[0], end[1], 9, heading + Math.PI - 0.5), end, polar(end[0], end[1], 9, heading + Math.PI + 0.5)],
+        ],
+        'Sky',
+        [x, y, 360],
+      ),
+      spots: [[...needle(32, northWest), 34, 'Red']],
+      words: [
+        [x, y - 66, bilingual('N', 'N')],
+        [x + 66, y, bilingual('E', 'E')],
+        [x, y + 66, bilingual('S', 'S')],
+        [x - 66, y, bilingual('O', 'W')],
+      ],
+    };
+  },
 
   // Art platform: a framed landscape hanging from a nail.
   Frame: () =>

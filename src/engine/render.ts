@@ -3,7 +3,16 @@ import { context2d, trace } from './canvas';
 import { clamp, ease, lerp, type Point, TAU } from './math';
 import { paperGrain, vignette, watercolour } from './paper';
 import { PIGMENTS } from './pigment';
-import type { Blot, InkPoint, Label, Plane, Print, Story, Thread } from './story';
+import {
+  type Blot,
+  type InkPoint,
+  type Label,
+  labelAlpha,
+  type Plane,
+  type Print,
+  type Story,
+  type Thread,
+} from './story';
 
 /** Where the camera looks and how close; it moves in place as it follows the pens. */
 export type Camera = { x: number; y: number; zoom: number };
@@ -168,14 +177,15 @@ export class Renderer {
       context.globalCompositeOperation = 'source-over';
     },
 
-    /** A name written in small italics beside its place, appearing when the line reaches it. */
+    /** A name written in small italics beside its place, appearing when the line reaches it and gone from the overview. */
     label: (label: Label, camera: Camera, time: number): void => {
       const { context, scale } = this;
-      if (time <= label.time) return;
+      const alpha = labelAlpha(label, time);
+      if (alpha <= 0) return;
       const [x, y] = this.toScreen(camera, label.x, label.y);
       const side = LABEL_SIDES[label.side];
       const gap = 8 * scale;
-      context.globalAlpha = 0.8 * ease.out(clamp((time - label.time) / 0.6, 0, 1));
+      context.globalAlpha = 0.8 * alpha;
       context.fillStyle = '#1d1b26';
       context.font = `italic ${Math.max(10, 15 * scale)}px "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif`;
       context.textAlign = side.align;

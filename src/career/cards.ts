@@ -88,11 +88,11 @@ type CardState = {
 
 /**
  * Cards pinned to the drawing: a stop's card unfolds while it is drawn, then folds into its tag.
- * Clicking a tag reopens its card. A split stop adds side cards, one per later entry, open only with their stop.
+ * Clicking a tag reopens its card. A split stop adds side cards, one per later entry, each folding into its own tag at its shape.
  */
 export class CardLayer {
   private readonly cards: CardState[];
-  private pinned: number | null = null;
+  private pinned: CardState | null = null;
 
   constructor(
     private readonly root: HTMLElement,
@@ -113,15 +113,16 @@ export class CardLayer {
     element.innerHTML = `<button class="tag mono" type="button"></button><div class="body"><div class="inner"></div></div>`;
     const tag = element.querySelector('button') as HTMLButtonElement;
     const inner = element.querySelector('.inner') as HTMLElement;
+    const card: CardState = { element, entries, inner, placed: false, shape, stop, tag, x: 0, y: 0 };
     tag.addEventListener('click', () => {
-      this.pinned = this.pinned === stop ? null : stop;
+      this.pinned = this.pinned === card ? null : card;
     });
     // An open card has no tag to click: a card reopened from its tag folds back when its note is clicked.
     inner.addEventListener('click', () => {
-      if (this.pinned === stop) this.pinned = null;
+      if (this.pinned === card) this.pinned = null;
     });
     this.root.append(element);
-    return { element, entries, inner, placed: false, shape, stop, tag, x: 0, y: 0 };
+    return card;
   }
 
   /** Writes every card and tag in a language. */
@@ -156,23 +157,26 @@ export class CardLayer {
     this.root.classList.toggle('overview', player.revealed);
     const { now, revealed } = player;
     const { width, height } = renderer;
-    for (const card of this.cards) {
-      const index = card.stop;
-      const mark = this.marks[index] as StopMark;
+    this.cards.forEach((card, order) => {
+      const mark = this.marks[card.stop] as StopMark;
       const side = card.shape === null ? null : mark.shapes[card.shape];
       const since = side?.time ?? mark.start.time;
       // Open while the stop is drawn, folded on the stretch of line leading to the next one: left open, it would outlive its place on screen.
       const opens = !revealed && now >= since && now < mark.end.time;
-      const open = opens || this.pinned === index;
-      // Side cards have no tag of their own on the line: they only exist while their stop is open.
-      const shown = side ? open : now >= mark.start.time;
+      const open = opens || this.pinned === card;
+      const shown = now >= since;
+      // A side card stands by its shape's top-right corner, folded or not; in the overview its tag joins the others under the line.
+      const byShape = side && !(revealed && !open);
       const [anchorX, anchorY] = renderer.toScreen(
         player.camera,
-        side?.x ?? (open ? cardAnchor(mark, renderer) : mark.start.x),
-        side?.y ?? mark.y,
+        side ? (byShape ? side.x : side.start) : open ? cardAnchor(mark, renderer) : mark.start.x,
+        side && byShape ? side.y : mark.y,
       );
       const target = { x: 0, y: 0 };
-      if (open && side) {
+      if (byShape && !open) {
+        target.x = anchorX + 18;
+        target.y = anchorY - 10;
+      } else if (open && side) {
         // Beside the shape's top-right corner, rising from it.
         const cardWidth = card.element.offsetWidth;
         const cardHeight = card.element.offsetHeight;
@@ -196,7 +200,7 @@ export class CardLayer {
       } else {
         // In the overview, tags shrink to their year and alternate on two rows so they never collide.
         target.x = anchorX + (revealed ? -20 : 4);
-        target.y = anchorY + 18 + (revealed ? (index % 2) * 24 : 0);
+        target.y = anchorY + 18 + (revealed ? (order % 2) * 24 : 0);
       }
       const easing = card.placed ? 0.3 : 1;
       card.x += (target.x - card.x) * easing;
@@ -204,9 +208,9 @@ export class CardLayer {
       card.placed = shown;
       card.element.style.transform = `translate3d(${card.x.toFixed(1)}px, ${card.y.toFixed(1)}px, 0)`;
       card.element.classList.toggle('open', open);
-      card.element.classList.toggle('pinned', this.pinned === index);
+      card.element.classList.toggle('pinned', this.pinned === card);
       const visible = shown && card.x < width + 40 && card.x > -360 && card.y < height + 40;
       card.element.classList.toggle('shown', visible);
-    }
+    });
   }
 }

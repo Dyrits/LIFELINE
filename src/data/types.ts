@@ -25,7 +25,7 @@ export type ShapeKey =
   | 'BrowserCode'
   | 'BrowserCalendar'
   | 'Ambulance'
-  | 'Backpack'
+  | 'Compass'
   | 'Bars'
   | 'Plane'
   | 'Bubble'

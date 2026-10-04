@@ -1,5 +1,5 @@
 import type { Side, Text } from '../data/types';
-import { clamp, lerp, noise, type Point } from './math';
+import { clamp, ease, lerp, noise, type Point } from './math';
 import type { Pigment } from './pigment';
 
 /** A position along a stroke; `up` marks pen-up travel that leaves no ink. */
@@ -56,14 +56,19 @@ export type Print = Readonly<{
   land: Pigment;
   sea: Pigment;
 }>;
-/** A name written beside (x, y) from `time`, on the given side, or centred on it. */
+/** A name written beside (x, y) from `time` until `until`, on the given side, or centred on it. */
 export type Label = Readonly<{
   x: number;
   y: number;
   text: Text;
   time: number;
+  until?: number;
   side: Side | 'Centre';
 }>;
+/** How visible a label is at `time`: it fades in once the line reaches its place, and out from `until`. */
+export const labelAlpha = (label: Label, time: number): number =>
+  ease.out(clamp((time - label.time) / 0.6, 0, 1)) *
+  (1 - ease.out(clamp((time - (label.until ?? Infinity)) / 0.8, 0, 1)));
 /** From `start` to `end`, the tip of thread `pen` is a plane. */
 export type Plane<Name extends string = string> = Readonly<{ pen: Name; start: number; end: number }>;
 /** How far the camera zooms in from `time`. */

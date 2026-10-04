@@ -87,11 +87,13 @@ test('the language choice is remembered', async ({ page }) => {
   await expect(page.locator('html')).not.toHaveAttribute('lang', start);
 });
 
-test('the final view shows every stop, folded', async ({ page }) => {
+test('the final view shows every job, folded', async ({ page }) => {
   const errors = watchErrors(page);
   // Well past the end, which moves as the drawing grows.
   await page.goto('/?path=career&lang=en&t=400');
-  await expect(page.locator('.card.shown')).toHaveCount(CAREER.length, { timeout: 8000 });
+  // One tag per stop, and one more per later job of a split stop.
+  const tags = CAREER.reduce((count, stop) => count + (stop.split ? stop.entries.length : 1), 0);
+  await expect(page.locator('.card.shown')).toHaveCount(tags, { timeout: 8000 });
   await expect(page.locator('.card.open')).toHaveCount(0);
   expect(errors).toEqual([]);
 });
@@ -108,6 +110,36 @@ test('in the final view, a tag reopens its card and the note folds it back', asy
   await card.locator('.inner').click();
   await expect(card).not.toHaveClass(/open/);
   await expect(card.locator('.tag')).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
+test('the second job of a split stop folds into its own tag, which reopens only its card', async ({ page }) => {
+  const errors = watchErrors(page);
+  await page.goto('/?path=career&lang=en&t=400');
+  const side = page.locator('.card.side[data-side="0"]');
+  await expect(side).toHaveClass(/shown/);
+  await expect(side.locator('.tag')).toHaveAttribute('aria-label', '2011 · RGIS');
+  await side.locator('.tag').click();
+  await expect(side).toHaveClass(/open/);
+  await expect(page.locator('.card[data-stop="0"]')).not.toHaveClass(/open/);
+  expect(errors).toEqual([]);
+});
+
+test('a split stop’s second job folds into its tag where its card stood, beside the top of its shape', async ({
+  page,
+}) => {
+  const errors = watchErrors(page);
+  await page.goto('/?path=career&lang=en&t=14');
+  await page.keyboard.press('Space');
+  const side = page.locator('.card.side[data-side="0"]');
+  await expect(side).toHaveClass(/shown/);
+  await expect(side).not.toHaveClass(/open/);
+  // Let the tags settle where they belong.
+  await page.waitForTimeout(500);
+  const sideTag = await side.locator('.tag').boundingBox();
+  const stopTag = await page.locator('.card[data-stop="0"] .tag').boundingBox();
+  // The stop's tag hangs under the line; the side tag stays up by the shape's top.
+  expect(sideTag && stopTag && sideTag.y < stopTag.y - 100).toBe(true);
   expect(errors).toEqual([]);
 });
 

@@ -35,7 +35,8 @@ export type ThreadName =
   | (typeof THREAD.Apprentices)[number];
 
 /** When a shape starts, and its top-right corner on the drawing. */
-export type ShapeMark = Readonly<{ time: number; x: number; y: number }>;
+/** A shape on the line: when it starts, where the line enters it (`start`), and its top-right corner (x, y). */
+export type ShapeMark = Readonly<{ time: number; start: number; x: number; y: number }>;
 
 /**
  * Where and when a stop is drawn: from the start's time and x to the end's, at height y.
@@ -217,6 +218,8 @@ function connect(build: Build, stop: CareerStop, previous: CareerStop, gap: numb
     ride(build, exit(way), () => 0, duration);
     emblem = Math.max(duration, details(story, THREAD.InkDetail, way.details, x, y, duration));
     washes(story, way, x, y, emblem);
+    for (const [wordX, wordY, text] of way.words ?? [])
+      story.labels.add({ side: 'Centre', text, time: story.time + emblem, x: x + wordX, y: y + wordY });
     story.time += emblem;
   }
   const speed = gap > 2 ? 150 : 210;
@@ -305,6 +308,7 @@ function drawShape(build: Build, drawn: Shape, stop: CareerStop): ShapeMark {
   const [x, y] = [ink.x, ink.y];
   const corner = [drawn.outline, ...drawn.details].flat();
   const mark = {
+    start: x,
     time: story.time,
     x: x + Math.max(...corner.map(point => point[0])),
     y: y + Math.min(...corner.map(point => point[1])),
@@ -373,6 +377,11 @@ function horizon({ story, ink }: Build): void {
 
 /** Once the line is drawn, the camera steps back over the whole career. */
 function ending({ story }: Build, end: number): void {
+  // Seen whole, the line is too small for its place names: they overlap, so they fade as the camera steps back.
+  const labels = story.labels.items;
+  labels.forEach((label, index) => {
+    labels[index] = { ...label, until: end + 1 };
+  });
   story.captions.add({ duration: 4.5, text: CAREER_CAPTIONS.stepBack, time: end + 1.4 });
   story.captions.add({ duration: Infinity, text: CAREER_CAPTIONS.overview, time: end + 6.5 });
   story.cues.add({

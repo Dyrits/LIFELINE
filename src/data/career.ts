@@ -69,8 +69,8 @@ export const CAREER: readonly CareerStop[] = [
   {
     caption: bilingual('Dans des champs sans fin, je traque les mauvaises herbes.', 'In endless fields, I hunt weeds.'),
     chapter: bilingual(
-      'Trois ans plus tard, je pose le clavier pour voyager. J’atteris en l’Australie, un visa vacances-travail en poche.',
-      'Three years in, I put the keyboard down to travel. I land in Australia, a working holiday visa in my pocket.',
+      'Trois ans plus tard, je pose le clavier pour voyager. Je traverse l’Asie du Sud-Est et atteris en l’Australie, un visa vacances-travail en poche.',
+      'Three years in, I put the keyboard down to travel. I cross through South-East Asia and land in Australia, a working holiday visa in my pocket.',
     ),
     country: AUSTRALIA,
     entries: [
@@ -145,7 +145,7 @@ export const CAREER: readonly CareerStop[] = [
       'À Bali, je rouvre l’ordinateur. Le code peut voyager avec moi.',
       'In Bali I open the laptop again. Code can travel with me.',
     ),
-    chapter: bilingual('L’Asie, sac au dos.', 'Asia, backpack on.'),
+    chapter: bilingual('Vers l’Asie, sac au dos.', 'Off to Asia, backpack on.'),
     country: bilingual('Indonésie', 'Indonesia'),
     entries: [
       {
@@ -169,7 +169,7 @@ export const CAREER: readonly CareerStop[] = [
     kind: 'Job',
     motifs: ['CandiBentar', 'BrowserGallery'],
     place: bilingual('Ubud', 'Ubud'),
-    way: 'Backpack',
+    way: 'Compass',
   },
   {
     caption: bilingual(
