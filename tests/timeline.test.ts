@@ -124,6 +124,25 @@ describe('career timeline', () => {
     expect(flights).toHaveLength(1);
   });
 
+  it('lays one background under all the shapes of a stop that is not split', () => {
+    timeline.stops.forEach((mark, index) => {
+      const stop = CAREER[index];
+      if (!stop || stop.split || mark.shapes.length < 2) return;
+      // Washes, not the small spots of colour laid over details.
+      const washes = timeline.story.blots.items.filter(
+        blot => blot.size > 200 && blot.time >= mark.start.time && blot.time <= mark.end.time,
+      );
+      expect(new Set(washes.map(blot => blot.pigment)).size, `stop ${index}`).toBe(1);
+      // Bridged: no gap between the washes along the stop.
+      const spans = washes
+        .map(blot => [blot.x - blot.size / 2, blot.x + blot.size / 2] as const)
+        .sort((a, b) => a[0] - b[0]);
+      spans.slice(1).forEach(([left], at) => {
+        expect(left, `stop ${index}`).toBeLessThan(spans[at]?.[1] ?? -Infinity);
+      });
+    });
+  });
+
   it('lasts a few minutes', () => {
     expect(timeline.end).toBeGreaterThan(120);
     expect(timeline.end).toBeLessThan(600);

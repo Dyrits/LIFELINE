@@ -164,14 +164,15 @@ export class Renderer {
         const progress = ease.out(clamp(age / 3.2, 0, 1));
         const size = blot.size * this.scale * (0.72 + 0.28 * progress);
         const [x, y] = this.toScreen(camera, blot.x, blot.y);
-        if (x + size < 0 || x - size > width || y + size < 0 || y - size > height) continue;
+        const wide = size * (blot.stretch ?? 1);
+        if (x + wide < 0 || x - wide > width || y + size < 0 || y - size > height) continue;
         let sprite = this.sprites.get(blot);
         if (!sprite) {
           sprite = watercolour(blot.pigment, blot.seed);
           this.sprites.set(blot, sprite);
         }
         context.globalAlpha = progress * blot.alpha;
-        context.drawImage(sprite, x - size / 2, y - size / 2, size, size);
+        context.drawImage(sprite, x - wide / 2, y - size / 2, wide, size);
       }
       context.globalAlpha = 1;
       context.globalCompositeOperation = 'source-over';

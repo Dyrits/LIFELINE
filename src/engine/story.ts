@@ -35,6 +35,8 @@ export type Blot = Readonly<{
   x: number;
   y: number;
   size: number;
+  /** How many times wider than tall, for a wash spread under several shapes. */
+  stretch?: number;
   pigment: Pigment;
   time: number;
   alpha: number;

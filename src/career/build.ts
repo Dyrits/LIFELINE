@@ -273,9 +273,40 @@ function drawStop(build: Build, stop: CareerStop, index: number, count: number, 
   const places = (stop.remoteFrom ?? []).filter((place): place is Text => place !== 'OnSite');
   if (places.length > 0) pinPlaces(build, places);
   const shapes: ShapeMark[] = [];
+  // The shapes of a stop told as one share a single wash, spread under them all; a split stop's jobs keep their own.
+  const spread = !stop.split && stop.motifs.filter(key => key !== 'Apprentices').length > 1;
+  const under: { pigment: Shape['pigment']; left: number; right: number; y: number; size: number }[] = [];
   for (const key of stop.motifs) {
-    if (key === 'Apprentices') story.time += apprentices(story);
-    else shapes.push(drawShape(build, shape.of(key), stop));
+    if (key === 'Apprentices') {
+      story.time += apprentices(story);
+      continue;
+    }
+    const drawn = shape.of(key);
+    const size = drawn.wash[2] * 1.3;
+    const centre = ink.x + drawn.wash[0];
+    under.push({
+      left: centre - size / 2,
+      pigment: drawn.pigment,
+      right: centre + size / 2,
+      size,
+      y: ink.y + drawn.wash[1],
+    });
+    shapes.push(drawShape(build, drawn, stop, !spread));
+  }
+  const [first] = under;
+  if (spread && first) {
+    const [left, right] = [first.left, Math.max(...under.map(wash => wash.right))];
+    const size = Math.max(...under.map(wash => wash.size));
+    story.blots.add({
+      alpha: 0.55,
+      pigment: first.pigment,
+      size,
+      // A little wider than the shapes' own washes: a watercolour never reaches the edges of its box.
+      stretch: (1.15 * (right - left)) / size,
+      time: (shapes[0]?.time ?? start.time) + 1,
+      x: (left + right) / 2,
+      y: under.reduce((sum, wash) => sum + wash.y, 0) / under.length,
+    });
   }
   linger(build, stop, start.time);
 
@@ -308,7 +339,7 @@ function pinPlaces(build: Build, places: readonly Text[]): void {
 }
 
 /** Draws a shape on the line: by the gold thread for a training, which then rides under the line until it ends. */
-function drawShape(build: Build, drawn: Shape, stop: CareerStop): ShapeMark {
+function drawShape(build: Build, drawn: Shape, stop: CareerStop, wash = true): ShapeMark {
   const { story, ink, gold } = build;
   const [x, y] = [ink.x, ink.y];
   const corner = [drawn.outline, ...drawn.details].flat();
@@ -336,7 +367,7 @@ function drawShape(build: Build, drawn: Shape, stop: CareerStop): ShapeMark {
     duration,
     details(story, training ? THREAD.GoldDetail : THREAD.InkDetail, drawn.details, x, y, duration),
   );
-  washes(story, drawn, x, y, duration);
+  washes(story, drawn, x, y, duration, wash);
   story.time += duration;
   return mark;
 }
@@ -440,16 +471,17 @@ const town = (place: Text): Text => ({
   fr: place.fr.split(', ')[0] ?? place.fr,
 });
 
-/** Lays a shape's watercolour wash halfway through drawing it, and its small coloured spots once it is done. */
-function washes(story: Story<ThreadName>, drawn: Shape, x: number, y: number, duration: number): void {
-  story.blots.add({
-    alpha: 0.55,
-    pigment: drawn.pigment,
-    size: drawn.wash[2] * 1.3,
-    time: story.time + duration * 0.5,
-    x: x + drawn.wash[0],
-    y: y + drawn.wash[1],
-  });
+/** Lays a shape's watercolour wash halfway through drawing it, unless its stop spreads one under all its shapes, and its small coloured spots once it is done. */
+function washes(story: Story<ThreadName>, drawn: Shape, x: number, y: number, duration: number, wash = true): void {
+  if (wash)
+    story.blots.add({
+      alpha: 0.55,
+      pigment: drawn.pigment,
+      size: drawn.wash[2] * 1.3,
+      time: story.time + duration * 0.5,
+      x: x + drawn.wash[0],
+      y: y + drawn.wash[1],
+    });
   for (const [spotX, spotY, size, pigment] of drawn.spots ?? [])
     story.blots.add({ alpha: 0.8, pigment, size, time: story.time + duration, x: x + spotX, y: y + spotY });
 }
