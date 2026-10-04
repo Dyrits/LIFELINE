@@ -692,7 +692,7 @@ const SHAPES: Record<ShapeKey, () => Shape> = {
       [160, -100, 480],
     ),
 
-  // Heading for Asia: a compass resting on the line, its needle turned from south to north-west.
+  // Heading for Asia: a compass resting on the line, which the line goes round anticlockwise, keeping its way; its needle turned from south to north-west.
   Compass: () => {
     const [x, y, radius] = [150, -90, 90];
     // Angles on screen, y downwards: south is π/2, north-west 5π/4.
@@ -711,7 +711,7 @@ const SHAPES: Record<ShapeKey, () => Shape> = {
     const heading = south + 0.4 + 3 * 0.38 + 0.16 + Math.PI / 2;
     return {
       ...define(
-        [[0, 0], [x, 0], ...arc(x, y, radius, south, south + TAU, 40).slice(1), [x, 0], [300, 0]],
+        [[0, 0], [x, 0], ...arc(x, y, radius, south, south - TAU, 40).slice(1), [x, 0], [300, 0]],
         [
           ...ticks,
           // The needle: a long diamond, its north half split down the middle.

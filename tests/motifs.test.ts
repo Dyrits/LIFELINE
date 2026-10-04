@@ -22,6 +22,14 @@ describe('job shapes', () => {
       }
   });
 
+  it('Compass: the line keeps its way round the dial, climbing the side it is heading to', () => {
+    const { outline } = shape.of('Compass');
+    // Where the line leaves the ground for the dial, and a few points into the climb.
+    const lift = outline.findIndex(([, y]) => y < -1);
+    const [before, climbing] = [outline[lift - 1], outline[lift + 4]];
+    expect(climbing?.[0]).toBeGreaterThan(before?.[0] ?? Infinity);
+  });
+
   it.each(shape.keys)('%s fits within a screen width', key => {
     const { outline, details } = shape.of(key);
     for (const stroke of [outline, ...details])
