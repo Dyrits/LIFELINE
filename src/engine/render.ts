@@ -1,4 +1,5 @@
 import type { Lang } from '../data/types';
+import { backdropSprite, type Sprite } from './backdrop';
 import { context2d, trace } from './canvas';
 import { clamp, ease, lerp, type Point, TAU } from './math';
 import { paperGrain, vignette, watercolour } from './paper';
@@ -96,6 +97,7 @@ export class Renderer {
   private readonly grain: CanvasPattern | null;
   private vignette: HTMLCanvasElement | null = null;
   private readonly sprites = new Map<Blot, HTMLCanvasElement>();
+  private readonly pictures = new Map<PicturePrint, Sprite>();
   private pixelRatio = 1;
 
   constructor(private readonly canvas: HTMLCanvasElement) {
@@ -237,38 +239,22 @@ export class Renderer {
       context.globalAlpha = 1;
     },
 
-    /** A printed picture: its outline washed and every stroke traced faintly, fading in. */
+    /** A printed picture, rendered once in its style, fading in. */
     picture: (picture: PicturePrint, camera: Camera, time: number): void => {
-      const { context, scale } = this;
+      const { context, width, height, scale } = this;
       if (time <= picture.time) return;
-      const onScreen = (stroke: readonly Point[]) =>
-        stroke.map(([pointX, pointY]) => this.toScreen(camera, pointX, pointY));
-      const outline = new Path2D();
-      trace(outline, onScreen(picture.outline));
-      const lines = new Path2D(outline);
-      for (const stroke of picture.strokes) trace(lines, onScreen(stroke));
-      // Fading out from its middle towards its edges, like a map, so it stays in the background.
-      const points = [picture.outline, ...picture.strokes]
-        .flat()
-        .map(([pointX, pointY]) => this.toScreen(camera, pointX, pointY));
-      const [xs, ys] = [points.map(point => point[0]), points.map(point => point[1])];
-      const [centreX, centreY] = [(Math.min(...xs) + Math.max(...xs)) / 2, (Math.min(...ys) + Math.max(...ys)) / 2];
-      const radius = 0.62 * Math.hypot(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys));
-      const fade = (rgb: readonly number[], alpha: number) => {
-        const gradient = context.createRadialGradient(centreX, centreY, radius * 0.3, centreX, centreY, radius);
-        gradient.addColorStop(0, `rgba(${rgb.join(',')},${alpha})`);
-        gradient.addColorStop(1, `rgba(${rgb.join(',')},0)`);
-        return gradient;
-      };
+      let sprite = this.pictures.get(picture);
+      if (!sprite) {
+        sprite = backdropSprite(picture);
+        this.pictures.set(picture, sprite);
+      }
+      const [x, y] = this.toScreen(camera, sprite.x, sprite.y);
+      const [wide, tall] = [sprite.width * scale, sprite.height * scale];
+      if (x + wide < 0 || x > width || y + tall < 0 || y > height) return;
       context.globalAlpha = ease.out(clamp((time - picture.time) / 1.6, 0, 1));
       context.globalCompositeOperation = 'multiply';
-      context.fillStyle = fade(PIGMENTS[picture.pigment], 0.34);
-      context.fill(outline);
+      context.drawImage(sprite.canvas, x, y, wide, tall);
       context.globalCompositeOperation = 'source-over';
-      context.strokeStyle = fade([58, 66, 84], 0.5);
-      context.lineWidth = Math.max(0.6, 1.1 * scale);
-      context.lineJoin = 'round';
-      context.stroke(lines);
       context.globalAlpha = 1;
     },
 

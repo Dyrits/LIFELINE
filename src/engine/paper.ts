@@ -5,7 +5,12 @@ import { PIGMENTS, type Pigment } from './pigment';
 const gaussian = (random: () => number): number => (random() + random() + random() + random() - 2) * 0.9;
 
 /** Splits every edge of a polygon at a randomly pushed midpoint, `depth` times over. */
-function deform(points: readonly Point[], depth: number, variance: number, random: () => number): readonly Point[] {
+export function deform(
+  points: readonly Point[],
+  depth: number,
+  variance: number,
+  random: () => number,
+): readonly Point[] {
   let result = points;
   for (let iteration = 0; iteration < depth; iteration++) {
     const refined: Point[] = [];

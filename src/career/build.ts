@@ -55,7 +55,7 @@ export type StopMark = Readonly<{
 export type Timeline = Readonly<{ story: Story<ThreadName>; stops: readonly StopMark[]; end: number; today: number }>;
 
 /** How much larger than life a shape is printed behind a stop. */
-const BACKDROP_SCALE = 1.2;
+const BACKDROP_SCALE = 1.3;
 
 /** Distance under the ink line at which the gold training thread rides. */
 const RIDE = 14;
@@ -385,7 +385,7 @@ function backdrop(build: Build, drawn: Shape): void {
   story.prints.add({
     kind: 'Picture',
     outline: place(drawn.outline),
-    pigment: drawn.pigment,
+    seed: 17,
     strokes: drawn.details.map(place),
     time: story.time,
   });

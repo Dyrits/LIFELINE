@@ -234,9 +234,8 @@ Screenshots: the first stop folded, the overview, the compass mid-drawing (the p
 Requested 2026-10-04: Dylan likes the line running over a background, as over the flight map, and wants more
 backgrounds that are not maps. Crop rows under Merredin were tried and rejected ("I don't like it", and they
 overlapped the map). His choice instead: Ubud's candi bentar is no longer drawn by the pen but printed in the
-background. A stop's `backdrop` shape (`src/data/types.ts`) is printed 1.2 times life size as the stop starts
-(`PicturePrint` in `src/engine/story.ts`, `draw.picture` in `src/engine/render.ts`): its outline filled with
-its pigment and its strokes traced faintly, fading in and fading towards its edges, like the map. The line walks
+background. A stop's `backdrop` shape (`src/data/types.ts`) is printed as the stop starts, fading in
+(`PicturePrint` in `src/engine/story.ts`, `draw.picture` in `src/engine/render.ts`), in the style below. The line walks
 along the ground through the gate's gap (`backdrop()` in `src/career/build.ts`), then draws the gallery, now
 Ubud's only shape, with its own wash. The map print is now `MapPrint`; both are kinds of `Print`.
 So no stop is drawn with several unsplit shapes any more: the shared wash (section above) applies to none today,
@@ -246,6 +245,13 @@ Evidence: `npm run check` (114 tests; new: the gate of Ubud is printed behind th
 across it, and only the gallery is drawn; red before the change), `npm run e2e` (15 tests).
 Screenshots at 1440x900 (`.agents/scripts/screenshot-career.mjs`): the gate fading in with the card open, the
 gallery drawn beside it, and the overview. At 1.6 times life size the gate ran off the top of the screen.
+
+Style (2026-10-05): Dylan found the flat print too close to a drawn shape; a background should look drawn or like
+aquarelle, and clearly sit behind. Of four candidates (aquarelle, pencil, mist, pencil sketch with a loose wash),
+he chose mist: the picture is rendered once onto its own canvas (`src/engine/backdrop.ts`), 1.3 times life size,
+as a pale blue-grey wash per part of its outline with its details traced faintly, dissolving towards its foot, so
+the line passes in front of it. The other styles were removed. Evidence: `npm run check` (114 tests), `npm run e2e`
+(15 tests), screenshots of the gate with the card open, beside the gallery, and the overview.
 
 Other backgrounds offered, none chosen yet: ruled or squared notebook paper under training stops, a street grid
 behind Lyon or Paris, maps for the flight home (Malacca → Bouguenais) and possibly Lima.
